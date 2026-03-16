@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: #10b981;    /* Emerald 500 */
+  --color-brand-dark: #0f172a;       /* Slate 900 */
+  --color-brand-surface: #f8fafc;    /* Slate 50 */
+  
+  --shadow-premium: 0 20px 40px rgba(15, 23, 42, 0.05);
+  --font-sans: "Inter", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+    margin: 0;
+    min-height: 100dvh;
+  }
+}
+
+/* Remove Game specific utilities like .bubble or .game-stage */
+@utility card-glass {
+  @apply bg-white/80 backdrop-blur-md border border-white shadow-sm;
+}
