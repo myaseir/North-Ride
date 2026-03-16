@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { 
-  Bell, LogOut, ChevronDown, Wallet, 
+  Bell, LogOut, ChevronDown, Wallet, Zap,
   Star, ShieldCheck, Car, CreditCard,
   User, Settings, Sparkles, Menu, X, Activity
 } from 'lucide-react';
@@ -189,10 +189,31 @@ export default function PassengerNavbar({ onOpenHistory, activeTab }) {
               <button onClick={() => setIsMobileMenuOpen(false)} className="p-3 bg-slate-100 rounded-full"><X size={24} /></button>
             </div>
 
-            <div className="bg-emerald-50 p-6 rounded-[2rem] border border-emerald-100 mb-6 flex flex-col items-center">
-              <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mb-1 opacity-60">Wallet Balance</p>
-              <h2 className="text-3xl font-black text-emerald-900 italic">{user.balance?.toLocaleString()} <span className="text-xs opacity-50">PKR</span></h2>
-            </div>
+            <div className="bg-slate-50 p-4 rounded-[1.5rem] border border-slate-100 mb-6 flex items-center justify-between relative overflow-hidden">
+  {/* Compact Content */}
+  <div className="flex items-center gap-4">
+    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-slate-100 shadow-sm shrink-0">
+      <Zap size={18} className="text-slate-300" fill="currentColor" />
+    </div>
+    
+    <div>
+      <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest leading-none mb-1">
+        Rewards
+      </p>
+      <div className="flex items-baseline gap-1.5">
+        <h2 className="text-xl font-[1000] text-slate-400 italic leading-none">0</h2>
+        <span className="text-[8px] font-black text-slate-400 uppercase">Coupons</span>
+      </div>
+    </div>
+  </div>
+
+  {/* Status Tag */}
+  <div className="px-3 py-1 bg-slate-100/50 border border-dashed border-slate-200 rounded-lg">
+    <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">
+      Empty Slot
+    </p>
+  </div>
+</div>
 
             <nav className="space-y-3">
               <MobileLink icon={<User size={20} />} label="My Profile" onClick={() => {}} />

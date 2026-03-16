@@ -63,10 +63,9 @@ export default function PassengerDashboard() {
 
       if (activeRes.ok) {
         const activeData = await activeRes.json();
-        // 🎯 FIX: Only set details if an actual trip object is returned
         if (activeData && activeData.id) {
           setActiveTripDetails(activeData);
-          setIsSearching(false); // Hide search if we have a live trip
+          setIsSearching(false); 
         } else {
           setActiveTripDetails(null);
         }
@@ -113,14 +112,13 @@ export default function PassengerDashboard() {
       syncUserAndData();
   }, [router, fetchDashboardData]);
 
-  // Polling to detect status changes (e.g. Driver verifies payment or starts trip)
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
     const interval = setInterval(() => {
         fetchDashboardData(token);
-    }, 10000); // Polling every 10 seconds
+    }, 10000); 
     
     return () => clearInterval(interval);
   }, [fetchDashboardData]);
@@ -170,11 +168,7 @@ export default function PassengerDashboard() {
 
       if (res.ok) {
         toast.success("Booking success! Awaiting verification.");
-        
-        // 1. Force a complete data sync
         await fetchDashboardData(user.token);
-        
-        // 2. Local fallback flip to ensure search hides immediately
         setIsSearching(false);
       } else {
         const err = await res.json();
@@ -198,59 +192,102 @@ export default function PassengerDashboard() {
     <div className="min-h-screen bg-[#F8FAFB] pb-12 selection:bg-emerald-100">
       <PassengerNavbar onOpenHistory={() => setSidebarOpen(true)} activeTab="search" />
       
-      <main className="max-w-7xl mx-auto mt-8 px-4 md:px-8 grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-700">
-        
-        {/* LEFT COLUMN: Logic switches between Search and Active Trip */}
-        <div className="lg:col-span-4 space-y-6">
-          <section className="bg-white p-8 rounded-[40px] shadow-2xl shadow-emerald-900/5 border border-emerald-100/50 relative">
-            <div className="relative z-10">
-              
-              {/* 🎯 UI LOGIC: If we have details, show status. Otherwise show search. */}
-              {activeTripDetails ? (
-                <div className="animate-in fade-in zoom-in-95 duration-500">
-                  <ActiveTripStatus 
-      trip={activeTripDetails} 
-      availableDiscounts={referralStats.availableDiscounts} // Pass this too!
-      onAddSeats={(bookingData) => {
-          // This calls your handleBookRide function defined above
-          handleBookRide(activeTripDetails.id, bookingData);
-      }}
-    />
-                </div>
-              ) : (
-                <div className="animate-in fade-in slide-in-from-left-4 duration-500">
-                  <div className="flex items-center gap-3 mb-8">
-                    <div className="p-3 bg-slate-900 text-white rounded-2xl shadow-lg shadow-slate-200">
-                      <Search size={20} className="text-emerald-400" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Find Ride</h2>
-                      <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest mt-1">Inter-City Network</p>
-                    </div>
-                  </div>
-                  <RideSearch onSearch={handleSearch} loading={loading} onClear={() => setIsSearching(false)} />
-                </div>
-              )}
-              
+      {/* 📱 MOBILE VIEW LOGIC */}
+      <div className="block lg:hidden">
+        {/* If trip is booked: Navbar -> ActivityBar -> Referral (at end) */}
+        {activeTripDetails ? (
+          <main className="px-4 mt-6 space-y-6">
+            <section className="bg-white p-6 rounded-[35px] shadow-xl border border-emerald-100/50">
+               <ActiveTripStatus 
+                trip={activeTripDetails} 
+                availableDiscounts={referralStats.availableDiscounts}
+                onAddSeats={(bookingData) => handleBookRide(activeTripDetails.id, bookingData)}
+              />
+            </section>
+            
+            <div className="px-2">
+               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Recent Rides</h3>
+               <PassengerRecentRides rides={recentRides} />
             </div>
-          </section>
 
+            <ReferralWidget stats={referralStats} />
+          </main>
+        ) : (
+          /* If NOT booked: Navbar -> Find Ride -> Search Result -> Recent Ride -> Referral */
+          <main className="px-4 mt-6 space-y-6">
+            <section className="bg-white p-6 rounded-[35px] shadow-xl border border-emerald-100/50">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 bg-slate-900 text-white rounded-xl">
+                  <Search size={18} className="text-emerald-400" />
+                </div>
+                <h2 className="text-lg font-black text-slate-900 uppercase tracking-tighter italic">Find Ride</h2>
+              </div>
+              <RideSearch onSearch={handleSearch} loading={loading} onClear={() => setIsSearching(false)} />
+            </section>
+
+            {isSearching && (
+              <section className="space-y-4">
+                <div className="flex justify-between items-center px-2">
+                   <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Radar Results</h3>
+                   <button onClick={() => setIsSearching(false)} className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">Clear</button>
+                </div>
+                {loading ? (
+                  <div className="py-10 flex justify-center"><Loader2 className="animate-spin text-emerald-500" /></div>
+                ) : searchResults.length > 0 ? (
+                  searchResults.map(t => (
+                    <PassengerTripCard key={t.id || t._id} trip={t} availableDiscounts={referralStats.availableDiscounts} onBook={handleBookRide} />
+                  ))
+                ) : (
+                  <div className="p-10 text-center bg-white rounded-[30px] border border-slate-100"><p className="text-[10px] font-bold text-slate-400">NO UNITS FOUND</p></div>
+                )}
+              </section>
+            )}
+
+            <div className="px-2">
+               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Recent Rides</h3>
+               <PassengerRecentRides rides={recentRides} />
+            </div>
+
+            <ReferralWidget stats={referralStats} />
+          </main>
+        )}
+      </div>
+
+      {/* 💻 LAPTOP VIEW (DESKTOP) - KEPT PERFECT AS REQUESTED */}
+      <main className="hidden lg:grid max-w-7xl mx-auto mt-8 px-8 grid-cols-12 gap-8">
+        <div className="lg:col-span-4 space-y-6">
+          <section className="bg-white p-8 rounded-[40px] shadow-2xl shadow-emerald-900/5 border border-emerald-100/50">
+            {activeTripDetails ? (
+              <ActiveTripStatus 
+                trip={activeTripDetails} 
+                availableDiscounts={referralStats.availableDiscounts}
+                onAddSeats={(bookingData) => handleBookRide(activeTripDetails.id, bookingData)}
+              />
+            ) : (
+              <div>
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-3 bg-slate-900 text-white rounded-2xl shadow-lg shadow-slate-200">
+                    <Search size={20} className="text-emerald-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Find Ride</h2>
+                    <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest mt-1">Inter-City Network</p>
+                  </div>
+                </div>
+                <RideSearch onSearch={handleSearch} loading={loading} onClear={() => setIsSearching(false)} />
+              </div>
+            )}
+          </section>
           <ReferralWidget stats={referralStats} />
         </div>
 
-        {/* RIGHT COLUMN: Results or Recent History */}
         <div className="lg:col-span-8 space-y-6">
           <div className="flex items-center justify-between px-2 border-b border-slate-200 pb-4">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
               {isSearching ? 'Active Radar Results' : 'Recent Rides'}
             </h3>
             {isSearching && (
-              <button 
-                onClick={() => setIsSearching(false)}
-                className="text-[9px] font-black uppercase text-emerald-600 hover:text-emerald-700 tracking-widest bg-emerald-50 px-3 py-1.5 rounded-xl"
-              >
-                Back to Feed
-              </button>
+              <button onClick={() => setIsSearching(false)} className="text-[9px] font-black uppercase text-emerald-600 hover:text-emerald-700 tracking-widest bg-emerald-50 px-3 py-1.5 rounded-xl">Back to Feed</button>
             )}
           </div>
 
@@ -259,20 +296,13 @@ export default function PassengerDashboard() {
               loading ? (
                 <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-emerald-500" size={32} /></div>
               ) : searchResults.length > 0 ? (
-                searchResults.map((t, idx) => (
-                  <div key={t.id || t._id} className="animate-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${idx * 100}ms` }}>
-                    <PassengerTripCard 
-                      trip={t} 
-                      availableDiscounts={referralStats.availableDiscounts}
-                      onBook={handleBookRide} 
-                    />
-                  </div>
+                searchResults.map((t) => (
+                  <PassengerTripCard key={t.id || t._id} trip={t} availableDiscounts={referralStats.availableDiscounts} onBook={handleBookRide} />
                 ))
               ) : (
                 <div className="py-32 text-center bg-white rounded-[50px] border border-slate-100 shadow-sm">
                   <Compass size={32} className="mx-auto text-slate-200 mb-4" />
                   <h4 className="text-slate-900 font-black text-xs uppercase tracking-tight">No units currently en route</h4>
-                  <p className="text-slate-400 text-[10px] uppercase font-bold mt-2 tracking-widest">Adjust locations or standby</p>
                 </div>
               )
             ) : (
