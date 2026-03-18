@@ -51,9 +51,19 @@ export default function PassengerTripCard({ trip, availableDiscounts, onBook }) 
         <div className="pt-5 border-t border-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4 w-full sm:w-auto">
             <div className="flex items-center gap-1.5 text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl">
-              <Clock size={12} />
-              <span className="text-[10px] font-black uppercase tracking-widest">{trip.departure_time || 'Immediate'}</span>
-            </div>
+  <Clock size={12} />
+  <span className="text-[10px] font-black uppercase tracking-widest">
+    {trip.departure_time ? (
+      new Intl.DateTimeFormat('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      }).format(new Date(trip.departure_time))
+    ) : (
+      'Immediate'
+    )}
+  </span>
+</div>
             <div className="flex items-center gap-1.5 text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl">
               <User size={12} />
               <span className="text-[10px] font-black uppercase tracking-widest">{availableSeats} Seats Left</span>

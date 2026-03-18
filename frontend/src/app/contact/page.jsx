@@ -21,9 +21,9 @@ export default function ContactPage() {
             </p>
             
             <div className="space-y-6 md:space-y-8 inline-block lg:block text-left">
-              <ContactInfo icon={<Mail size={20} />} title="Email" detail="support@northride.com" />
-              <ContactInfo icon={<Phone size={20} />} title="Phone" detail="+92 300 1234567" />
-              <ContactInfo icon={<MapPin size={20} />} title="Headquarters" detail="Glacia Labs HQ, Innovation District" />
+              <ContactInfo icon={<Mail size={20} />} title="Email" detail="northride@gmail.com" />
+              <ContactInfo icon={<Phone size={20} />} title="Phone" detail="+92 3169030178" />
+              <ContactInfo icon={<MapPin size={20} />} title="Location" detail="Gilgit Baltistan" />
             </div>
           </div>
 
@@ -31,8 +31,8 @@ export default function ContactPage() {
           <div className="bg-slate-50 p-6 sm:p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] border border-slate-100">
             <form className="space-y-5 md:space-y-6">
               <div className="grid md:grid-cols-2 gap-5 md:gap-6">
-                <Input label="Full Name" placeholder="John Doe" />
-                <Input label="Email Address" placeholder="john@example.com" />
+                <Input label="Full Name" placeholder="your full name" />
+                <Input label="Email Address" placeholder="email@example.com" />
               </div>
               <Input label="Subject" placeholder="How can we help?" />
               <div>

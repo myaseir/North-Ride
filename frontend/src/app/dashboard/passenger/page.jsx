@@ -175,7 +175,7 @@ export default function PassengerDashboard() {
         toast.error(err.detail || "Booking failed");
       }
     } catch (err) {
-      toast.error("Network error.");
+      // toast.error("Network error.");
     }
   };
 

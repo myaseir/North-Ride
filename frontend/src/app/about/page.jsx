@@ -3,69 +3,79 @@
 import Link from 'next/link';
 import Navbar from '../components/Navbar'; 
 import Footer from '../components/Footer'; 
-import { Users, Target, Lightbulb, Cpu, ShieldCheck, ArrowRight, Zap } from 'lucide-react';
+import { Users, Shield, MapPin, Cpu, CheckCircle, ArrowRight, Car } from 'lucide-react';
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen bg-[#fcfdfd]">
+    <main className="min-h-screen bg-white">
       <Navbar />
 
       {/* --- HERO SECTION --- */}
-      <section className="pt-32 md:pt-56 pb-16 md:pb-24 px-6 relative overflow-hidden">
-        <div className="max-w-4xl mx-auto text-center relative z-10">
-          <h1 className="text-5xl md:text-8xl font-[1000] text-slate-900 tracking-tighter leading-[1.1] md:leading-none mb-6 md:mb-8 italic">
-            Our <span className="text-emerald-500 underline decoration-slate-200">Mission.</span>
+      <section className="pt-24 md:pt-40 pb-12 md:pb-20 px-6 text-center">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl md:text-7xl font-black text-slate-900 tracking-tight mb-6">
+            Our <span className="text-emerald-500 italic">Promise.</span>
           </h1>
-          <p className="text-lg md:text-2xl text-slate-500 font-medium leading-relaxed px-4 md:px-0">
-            We didn't just build a ride-sharing app. We engineered a high-performance mobility terminal that empowers captains and respects passengers.
+          <p className="text-lg md:text-xl text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto">
+            We are more than just a car booking app. We are building a better way for people in the North to travel safely and comfortably.
           </p>
         </div>
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[400px] md:h-[600px] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-emerald-50/40 via-transparent to-transparent -z-10" />
       </section>
 
       {/* --- THE VISION (Glacia Labs) --- */}
-      <section className="py-16 md:py-24 bg-slate-900 text-white overflow-hidden relative rounded-[2.5rem] md:rounded-[4rem] mx-4 md:mx-8">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
-          <div className="relative z-10 order-2 md:order-1">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 rounded-full border border-emerald-500/20 mb-6">
+      <section className="py-12 md:py-20 bg-slate-900 text-white rounded-[2rem] md:rounded-[3rem] mx-4 md:mx-8 px-6">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div className="order-2 md:order-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 rounded-full border border-emerald-500/30 mb-6">
               <Cpu size={14} className="text-emerald-400" />
-              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">Engineering Excellence</span>
+              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Built Locally</span>
             </div>
-            <h2 className="text-3xl md:text-5xl font-black mb-6 leading-tight">Architected by <br /><span className="italic text-emerald-400">Glacia Labs</span></h2>
-            <p className="text-slate-400 text-base md:text-lg leading-relaxed mb-8">
-              Born in the heart of Glacia Labs, North Ride was developed to solve the "Terminal Crisis" in urban transit. We believe that technology should be a tool for economic empowerment.
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">Made by <span className="text-emerald-400">Glacia Labs</span></h2>
+            <p className="text-slate-300 text-base md:text-lg mb-8 leading-relaxed">
+              North Ride was created to fix travel problems in our mountains. We believe technology should help our local drivers earn more and our passengers travel better.
             </p>
             <ul className="space-y-4">
-              <li className="flex items-center gap-3 text-sm font-bold"><Zap size={18} className="text-emerald-500"/> Real-time latency optimization</li>
-              <li className="flex items-center gap-3 text-sm font-bold"><ShieldCheck size={18} className="text-emerald-500"/> End-to-end financial transparency</li>
+              <li className="flex items-center gap-3 text-sm font-semibold"><CheckCircle size={18} className="text-emerald-500"/> Faster bookings, even with slow internet</li>
+              <li className="flex items-center gap-3 text-sm font-semibold"><CheckCircle size={18} className="text-emerald-500"/> Honest and clear pricing for everyone</li>
             </ul>
           </div>
-          <div className="aspect-square bg-gradient-to-br from-emerald-500/20 to-teal-500/10 rounded-[2rem] md:rounded-[3rem] border border-white/10 flex items-center justify-center group overflow-hidden order-1 md:order-2">
-              <Cpu size={80} className="md:w-[120px] md:h-[120px] text-white/10 group-hover:scale-125 transition-transform duration-700" />
+          <div className="aspect-square bg-emerald-500/10 rounded-2xl border border-white/5 flex items-center justify-center order-1 md:order-2">
+              <Car size={80} className="md:w-32 md:h-32 text-emerald-500 opacity-50" />
           </div>
         </div>
       </section>
 
       {/* --- CORE VALUES --- */}
-      <section className="py-20 md:py-32 max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-12">
-          <ValueCard icon={<Users className="text-emerald-500" />} title="Captain First" desc="We provide tools, not just tasks. Our captains are the backbone of the terminal." />
-          <ValueCard icon={<Target className="text-blue-500" />} title="Precision" desc="Our algorithms prioritize accuracy over speed, ensuring reliable pickups." />
-          <ValueCard icon={<Lightbulb className="text-purple-500" />} title="Innovation" desc="Powered by Glacia Labs, we are constantly deploying updates." />
+      <section className="py-20 max-w-7xl mx-auto px-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <ValueCard 
+            icon={<Users className="text-emerald-500" />} 
+            title="Respect Drivers" 
+            desc="Our drivers (Captains) are our partners. We give them the best tools to manage their work." 
+          />
+          <ValueCard 
+            icon={<Shield className="text-emerald-500" />} 
+            title="Safe Travel" 
+            desc="Your safety is our priority. Every ride is tracked to keep you and your family safe." 
+          />
+          <ValueCard 
+            icon={<MapPin className="text-emerald-500" />} 
+            title="Local Pride" 
+            desc="Built specifically for the roads and people of Gilgit Baltistan." 
+          />
         </div>
       </section>
 
       {/* --- CTA SECTION --- */}
-      <section className="py-16 md:py-24 px-4 md:px-6">
-        <div className="max-w-5xl mx-auto bg-emerald-500 rounded-[2.5rem] md:rounded-[3rem] p-10 md:p-20 text-center relative overflow-hidden">
-          <div className="relative z-10">
-            <h2 className="text-3xl md:text-6xl font-black text-white mb-8 tracking-tighter">Ready to join the evolution?</h2>
-            <Link href="/login" className="inline-flex w-full md:w-auto items-center justify-center gap-3 px-10 py-5 bg-white text-emerald-600 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-900 hover:text-white transition-all shadow-xl">
-              Launch Terminal <ArrowRight size={16} />
-            </Link>
-          </div>
-          <Zap className="absolute -bottom-10 -right-10 text-white/10 hidden md:block" size={300} />
-          <Zap className="absolute -bottom-5 -right-5 text-white/10 md:hidden" size={150} />
+      <section className="py-12 pb-24 px-4">
+        <div className="max-w-5xl mx-auto bg-emerald-500 rounded-[2.5rem] p-10 md:p-16 text-center text-white">
+          <h2 className="text-3xl md:text-5xl font-black mb-8">Ready to travel with us?</h2>
+          <Link href="/login" className="inline-flex w-full md:w-auto items-center justify-center gap-3 px-10 py-4 bg-white text-emerald-600 rounded-xl font-bold uppercase text-xs tracking-widest hover:bg-slate-900 hover:text-white transition-all shadow-lg">
+            Start Booking Now <ArrowRight size={16} />
+          </Link>
+          <p className="mt-6 text-emerald-100 text-[10px] font-bold tracking-[0.3em] uppercase opacity-70">
+            North Ride v3.0
+          </p>
         </div>
       </section>
 
@@ -76,12 +86,12 @@ export default function AboutPage() {
 
 function ValueCard({ icon, title, desc }) {
   return (
-    <div className="group text-center md:text-left">
-      <div className="w-16 h-16 bg-white border border-slate-100 rounded-2xl shadow-sm flex items-center justify-center mb-6 mx-auto md:mx-0 group-hover:bg-slate-900 group-hover:text-white transition-all">
+    <div className="text-center md:text-left">
+      <div className="w-14 h-14 bg-slate-50 rounded-xl flex items-center justify-center mb-6 mx-auto md:mx-0">
         {icon}
       </div>
-      <h4 className="text-xl font-black text-slate-900 mb-4 uppercase italic tracking-tight">{title}</h4>
-      <p className="text-slate-500 leading-relaxed font-medium">{desc}</p>
+      <h4 className="text-lg font-bold text-slate-900 mb-3 uppercase tracking-tight">{title}</h4>
+      <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
     </div>
   );
 }

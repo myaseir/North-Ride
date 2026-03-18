@@ -4,6 +4,7 @@ from app.repositories.user_repo import UserRepository  # 🎯 Added
 from app.db.redis import redis_mgr 
 from fastapi import HTTPException, status
 import logging
+from datetime import datetime
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -52,6 +53,7 @@ class TripService:
     async def book_seat(
         self, 
         user_id: str, 
+        passenger_name: str,
         sender_name: str, 
         trip_id: str, 
         transaction_id: str, 
@@ -88,7 +90,8 @@ class TripService:
         # 🎯 Pass the new fields to your repository
             booking_id = await self.booking_repo.create_pending(
                 user_id=user_id,
-                passenger_name=sender_name,
+                passenger_name=passenger_name,
+                sender_name=sender_name,
                 trip_id=trip_id,
                 amount=amount_paid,      # Use the verified amount from frontend
                 trx_id=transaction_id,
@@ -206,7 +209,55 @@ class TripService:
         return {"status": "success", "message": "Seat released."}
 
     async def search_trips(self, origin: str, destination: str, date_str: str = None):
-        """Search logic for passengers."""
+        """
+        Professional Search Logic: 
+        1. Validation 2. Strict Search 3. Fallback Search 4. Weighted Ranking
+        """
+    
+    # --- 4. DATA STRICTNESS (Server-Side Validation) ---
         if not origin or not destination:
-            raise HTTPException(status_code=400, detail="Origin and Destination required.")
-        return await self.trip_repo.find_trips(origin, destination, date_str)
+         raise HTTPException(status_code=400, detail="Origin and Destination required.")
+
+    # Prevent searching for past dates
+        today_date = datetime.now().strftime("%Y-%m-%d")
+        if date_str and date_str < today_date:
+            raise HTTPException(status_code=400, detail="Cannot search for rides in the past.")
+
+    # --- 2. HANDLING "NO RESULTS" (Strict vs. Flexible) ---
+    # First, try the strict search (Exact Date)
+        trips = await self.trip_repo.find_trips(origin, destination, date_str)
+    
+        is_fallback = False
+        if not trips:
+        # If no rides today, search for any rides starting from tomorrow onwards
+        # We limit this to ensure we don't pull 1000s of future rides at once
+            trips = await self.trip_repo.find_upcoming_trips(origin, destination, date_str, limit=20)
+            is_fallback = True
+
+    # --- 1. THE RANKING BASIS (Sorting Logic) ---
+    # We apply a multi-level sort (Weighted Scoring)
+    # Priority: Date (Asc) -> Driver Rating (Desc) -> Price (Asc)
+    
+        def get_ranking_score(trip):
+        # We use a tuple for sorting:
+        # 1. Date (earliest first)
+        # 2. Rating (inverse it so higher rating comes first: e.g., 5.0 becomes -5.0)
+        # 3. Price (lowest first)
+            return (
+                trip.get("date"), 
+                -trip.get("driver_rating", 0), 
+                trip.get("price", 0)
+            )
+
+        trips.sort(key=get_ranking_score)
+
+    # --- 3. INFINITE SCROLL / UI HELPERS ---
+    # We tag the trips so the Frontend knows if these are "Exact Matches" 
+    # or "Suggested Future Rides" to show a Date Divider.
+        for trip in trips:
+            trip["is_exact_match"] = not is_fallback
+        # This helps the frontend render the "Suggested for Tomorrow" header
+            if is_fallback:
+                trip["ui_label"] = "Suggested Future Ride"
+
+        return trips

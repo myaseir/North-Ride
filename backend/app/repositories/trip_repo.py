@@ -69,24 +69,27 @@ class TripRepository:
         return str(result.inserted_id)
 
     async def find_trips(self, origin: str, destination: str, date_str: Optional[str] = None) -> List[dict]:
-        """
-        The Passenger Search Query.
-        Matches exact route and status, with flexible date filtering.
-        """
         query = {
             "origin": origin.strip().lower(),
             "destination": destination.strip().lower(),
             "status": "scheduled",
             "available_seats": {"$gt": 0}
         }
-    
+
         if date_str:
-            # We look for the exact date string 'YYYY-MM-DD'
             query["date"] = date_str
 
-        cursor = self.collection.find(query).sort("departure_time", 1)
-        trips = await cursor.to_list(length=100)
+    # PROFESSIONAL SORT: 
+    # 1. Date/Time (Soonest first)
+    # 2. Driver Rating (Highest first -> -1)
+    # 3. Price (Lowest first -> 1)
+        cursor = self.collection.find(query).sort([
+            ("departure_time", 1),
+            ("driver_rating", -1), 
+            ("price", 1)
+        ])
     
+        trips = await cursor.to_list(length=100)
         return [self._format_trip(t) for t in trips]
 
     async def get_driver_active_trip(self, driver_id: str) -> Optional[dict]:
@@ -162,4 +165,22 @@ class TripRepository:
 
         cursor = self.collection.find(query).sort("departure_time", 1)
         trips = await cursor.to_list(length=100)
+        return [self._format_trip(t) for t in trips]
+    
+    async def find_upcoming_trips(self, origin: str, destination: str, date_str: str, limit: int = 20) -> List[dict]:
+        """
+        Fallback Search: Finds rides AFTER the requested date if the exact date is empty.
+        """
+        query = {
+            "origin": origin.strip().lower(),
+            "destination": destination.strip().lower(),
+            "status": "scheduled",
+            "available_seats": {"$gt": 0},
+            "date": {"$gt": date_str}  # Find anything strictly after the searched date
+        }
+
+    # Sort by date and time so the closest future rides show first
+        cursor = self.collection.find(query).sort([("date", 1), ("departure_time", 1)]).limit(limit)
+        trips = await cursor.to_list(length=limit)
+    
         return [self._format_trip(t) for t in trips]

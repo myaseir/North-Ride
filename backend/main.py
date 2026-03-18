@@ -7,7 +7,6 @@ from app.api.auth import router as auth_router
 from app.core.deps import get_current_user
 from app.api.trips import router as trips_router
 from app.api.user import router as user_router
-from app.api.trips import router as bookings_router
 from app.api.driver import router as driver_router
 from app.api.admin_travel import router as admin_router
 from app.api.system import router as system_router
@@ -39,7 +38,6 @@ app.add_middleware(
 app.include_router(user_router, prefix="/api/users", tags=["Users"])
 app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
 app.include_router(trips_router, prefix="/api/trips", tags=["Trips"])
-app.include_router(bookings_router, prefix="/api/bookings", tags=["Bookings"])
 app.include_router(driver_router, prefix="/api/driver", tags=["Driver"])
 app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])
 app.include_router(system_router, prefix="/api/system", tags=["System"])

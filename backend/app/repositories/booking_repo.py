@@ -46,7 +46,8 @@ class BookingRepository:
         amount: float, 
         trx_id: str, 
         seat_layout: list,
-        account_number: str 
+        account_number: str ,
+        sender_name: str = None
         ):
         """
         Creates a new booking document. Allows multiple bookings per user 
@@ -69,6 +70,7 @@ class BookingRepository:
             "passenger_id": self._to_id(user_id),
             "trip_id": self._to_id(trip_id),
             "passenger_name": passenger_name,
+            "sender_name": sender_name,
             "seat_layout": seat_layout,
             "total_price": float(amount),
             "transactionId": trx_id,
@@ -116,10 +118,19 @@ class BookingRepository:
                 "$project": {
                     "id": {"$toString": "$_id"},
                     "_id": {"$toString": "$_id"},
-                    "passenger_name": 1,
+                    "passenger_name": "$passenger_name",
+                    
                     "amount": 1,
                     "trx_id": 1,
                     "status": 1,
+                    "amount": "$total_price",       
+                    "amount_paid": 1,               
+                    "trx_id": { "$ifNull": ["$transactionId", "$trx_id"] },
+    
+    # This line is the fix: It looks for senderName, falls back to passenger_name
+                    "sender_name": { "$ifNull": ["$sender_name", "--- DATA MISSING IN DB ---"] },
+    
+                    "account_no": { "$ifNull": ["$account_number", "$account_no"] },
                     "created_at": {"$toString": "$created_at"},
                     "trip_id": {"$toString": "$trip_id"},
                     "listing_driver_id": {"$toString": "$user_info._id"},

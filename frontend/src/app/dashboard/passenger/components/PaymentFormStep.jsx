@@ -13,11 +13,15 @@ export default function PaymentFormStep({ finalPrice, initialData, onBack, onSub
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
+  // 🎯 MATH FIX: Calculate the 20% advance if finalPrice is the total
+  // Or simply use finalPrice if you already forwarded the 20% from the previous step
+  const advancePayable = initialData.advancePayment || Math.ceil(finalPrice * 0.20);
+
   const [formData, setFormData] = useState({
     senderName: initialData.senderName || '',
     accountNo: initialData.accountNo || '',
     transactionId: initialData.transactionId || '',
-    amount: finalPrice 
+    amount: advancePayable // Default to the advance amount
   });
 
   const isFormValid = formData.senderName && formData.accountNo && formData.transactionId;
@@ -33,11 +37,12 @@ export default function PaymentFormStep({ finalPrice, initialData, onBack, onSub
     onSubmit({
         senderName: formData.senderName,
         transactionId: formData.transactionId,
-        account_number: formData.accountNo, // Maps to backend naming
-        amount_paid: parseFloat(finalPrice), // Ensure this is the variable name used
+        account_number: formData.accountNo,
+        amount_paid: advancePayable, // 🎯 Submit the 20% advance to the backend
         submittedAt: new Date().toISOString()
     });
 };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-md mx-auto">
       
@@ -91,15 +96,16 @@ export default function PaymentFormStep({ finalPrice, initialData, onBack, onSub
                     <Banknote size={20} />
                 </div>
                 <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Required Deposit</p>
-                    <p className="text-xs font-bold text-slate-600">Total Settlement Due</p>
+                    <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">Advance Deposit (20%)</p>
+                    <p className="text-xs font-bold text-slate-600">Pay now to reserve seat</p>
                 </div>
             </div>
             <div className="text-right">
                 <h2 className="text-2xl font-black text-slate-900 tracking-tighter italic">
                     <span className="text-xs font-bold mr-1 not-italic">PKR</span>
-                    {finalPrice.toLocaleString()}
+                    {advancePayable.toLocaleString()}
                 </h2>
+                <p className="text-[9px] font-bold text-slate-400 line-through">Total: PKR {finalPrice.toLocaleString()}</p>
             </div>
       </div>
 
@@ -151,7 +157,7 @@ export default function PaymentFormStep({ finalPrice, initialData, onBack, onSub
       <div className="bg-slate-50 rounded-2xl p-4 flex gap-3 border border-slate-100">
         <Info size={16} className="text-slate-400 shrink-0 mt-0.5" />
         <p className="text-[10px] font-medium text-slate-500 leading-relaxed">
-            Please ensure the Transaction ID is correct. Your payment will be verified manually by our finance team within <span className="text-slate-900 font-bold">15-30 minutes</span>. Incorrect details may lead to booking cancellation.
+            Please transfer exactly <span className="text-emerald-600 font-bold">PKR {advancePayable.toLocaleString()}</span>. Remaining balance will be paid to the driver. Verification takes <span className="text-slate-900 font-bold">15-30 minutes</span>.
         </p>
       </div>
 
@@ -168,7 +174,7 @@ export default function PaymentFormStep({ finalPrice, initialData, onBack, onSub
           disabled={!isFormValid}
           className="flex-1 h-16 bg-slate-900 text-white rounded-3xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-200 hover:bg-emerald-600 transition-all flex items-center justify-center gap-3 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed active:scale-[0.98]"
         >
-          Submit Transfer Proof <CheckCircle2 size={18} className="text-emerald-400" />
+          Pay PKR {advancePayable.toLocaleString()} Now <CheckCircle2 size={18} className="text-emerald-400" />
         </button>
       </div>
     </div>

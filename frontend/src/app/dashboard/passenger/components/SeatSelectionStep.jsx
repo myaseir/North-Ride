@@ -74,9 +74,10 @@ const seatStatuses = useMemo(() => {
   };
 
   // --- PRICING MATH ---
-  const currentTotalBasePrice = basePricePerSeat * selectedSeats.length;
+const currentTotalBasePrice = basePricePerSeat * selectedSeats.length;
   const finalPrice = useDiscount ? Math.floor(currentTotalBasePrice * 0.9) : currentTotalBasePrice;
-
+  // 🎯 NEW: Calculate 20% Advance
+  const advancePayment = Math.ceil(finalPrice * 0.20);
   // --- HANDLERS ---
   const toggleSeat = (seatId) => {
     const status = getSeatStatus(seatId);
@@ -103,12 +104,17 @@ const seatStatuses = useMemo(() => {
     return;
   }
 
+  // Calculate advance here if not already defined in the main body
+  const advancePayment = Math.ceil(finalPrice * 0.20);
+
   // Send the data using BOTH keys to ensure the parent catches it
   onNext({ 
     seats: selectedSeats.length, 
-    seatLayout: selectedSeats,  // For legacy support
-    seat_layout: selectedSeats, 
-    finalPrice: finalPrice,// For the backend-ready payload
+    seatLayout: selectedSeats,      // For legacy support
+    seat_layout: selectedSeats,     // For the backend-ready payload
+    totalPrice: finalPrice,         // The full trip cost
+    advancePayment: advancePayment, // 🎯 Forward the 20% to the payment form
+    finalPrice: advancePayment,     // Overwriting finalPrice ensures legacy components charge 20%
     useDiscount 
   });
 };
@@ -233,21 +239,40 @@ const seatStatuses = useMemo(() => {
       )}
 
       <div className="flex justify-between items-end px-2 pt-2">
-        <div>
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Fare</span>
-          {selectedSeats.length === 0 && (
-             <div className="flex items-center gap-1 text-[9px] font-black text-amber-500 uppercase mt-1">
-               <Info size={10} /> Tap a seat to select
-             </div>
-          )}
-        </div>
-        <div className="text-right">
-          {useDiscount && <span className="text-xs text-slate-400 line-through block -mb-1">PKR {currentTotalBasePrice.toLocaleString()}</span>}
-          <span className={`text-3xl font-black tracking-tighter transition-colors ${selectedSeats.length > 0 ? 'text-slate-900' : 'text-slate-300'}`}>
-            PKR {finalPrice.toLocaleString()}
-          </span>
-        </div>
+  <div>
+    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">Advance Amount</span>
+    <span className="text-[10px] font-black text-emerald-500 uppercase tracking-tight">20% to Reserve Seat</span>
+    {selectedSeats.length === 0 && (
+      <div className="flex items-center gap-1 text-[9px] font-black text-amber-500 uppercase mt-1">
+        <Info size={10} /> Tap a seat to select
       </div>
+    )}
+  </div>
+  
+  <div className="text-right">
+    {/* Full Price Reference */}
+    <div className="flex flex-col mb-1">
+      {useDiscount && (
+        <span className="text-[10px] text-slate-400 line-through">
+          PKR {currentTotalBasePrice.toLocaleString()}
+        </span>
+      )}
+      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        Total: PKR {finalPrice.toLocaleString()}
+      </span>
+    </div>
+
+    {/* The 20% Payable Amount */}
+    <div className="flex flex-col items-end">
+      <span className="text-[9px] font-black text-slate-900 uppercase bg-emerald-100 px-2 py-0.5 rounded-md mb-1">
+        Payable Now
+      </span>
+      <span className={`text-3xl font-black tracking-tighter transition-colors ${selectedSeats.length > 0 ? 'text-slate-900' : 'text-slate-300'}`}>
+        PKR {advancePayment.toLocaleString()}
+      </span>
+    </div>
+  </div>
+</div>
 
       <button 
         onClick={handleContinue}

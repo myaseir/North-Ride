@@ -29,6 +29,16 @@ class UserRepository:
     def collection(self):
         return db.db.users
 
+    async def create_user(self, user_data: dict) -> str:
+        """Inserts a new passenger/user document."""
+        result = await self.collection.insert_one(user_data)
+        return str(result.inserted_id)
+
+    async def create_driver_application(self, driver_data: dict) -> str:
+        """Inserts a new driver application document."""
+        result = await self.collection.insert_one(driver_data)
+        return str(result.inserted_id)
+    
     async def get_by_email(self, email: str) -> Optional[dict]:
         """Fetches a user by email for login/auth."""
         try:
@@ -83,6 +93,8 @@ class UserRepository:
         result = await self.collection.update_one({"_id": oid}, update_query)
         return result.modified_count > 0
 
+    
+    
     async def update_wallet(self, user_id: str, amount: Any) -> bool:
         """Atomic wallet increment with strict type casting."""
         try:

@@ -100,20 +100,26 @@ async def end_trip(trip_id: str, current_user: dict = Depends(get_current_user))
     return await trip_service.complete_trip(trip_id, str(current_user["_id"]))
 # --- PASSENGER ENDPOINTS ---
 
-@router.get("/search") # Remove response_model temporarily to debug or use a helper
+@router.get("/search")
 async def search_trips(origin: str, destination: str, date: Optional[str] = None):
-    """Passenger search route."""
+    """Passenger search route with strict ranking and fallback."""
+    
+    # 1. Fetch trips (The ranking/next-day logic should be inside this service call)
     trips = await trip_service.search_trips(origin, destination, date)
     
-    # 🎯 MUST convert _id to id so the frontend can read it
-    for trip in trips:
-        trip["id"] = str(trip["_id"])
-        if "_id" in trip:
-            del trip["_id"]
-        if "driver_id" in trip:
-            trip["driver_id"] = str(trip["driver_id"])
-            
-    return trips
+    # 2. Professional Data Transformation
+    # Instead of a manual loop with 'del', we map it to a clean dictionary
+    return [
+        {
+            **trip,
+            "id": str(trip["_id"]),
+            "driver_id": str(trip.get("driver_id")) if trip.get("driver_id") else None,
+            "_id": None # Most frameworks handle removing nulls automatically
+        }
+        for trip in trips
+    ]
+    
+    
 
 @router.get("/manifest/{trip_id}")
 async def get_trip_manifest(trip_id: str, current_user: Optional[dict] = Depends(lambda: None)):
@@ -134,8 +140,11 @@ async def get_trip_manifest(trip_id: str, current_user: Optional[dict] = Depends
     cleaned_bookings = []
     for b in bookings:
         cleaned_bookings.append({
-            "seat_layout": b.get("seat_layout", []),  # e.g., ['f-l']
-            "status": b.get("status"),                # 'confirmed' or 'pending'
+            "id": b.get("id"), # Useful for unique keys in React
+            "seat_layout": b.get("seat_layout", []),
+            "status": b.get("status"),
+            "passenger_name": b.get("passenger_name"), # 🎯 REQUIRED for your frontend check
+            "is_manual": b.get("is_manual", False)    # 🎯 REQUIRED to unlock the buttons
         })
 
     return {
@@ -148,10 +157,14 @@ async def get_trip_manifest(trip_id: str, current_user: Optional[dict] = Depends
 @router.post("/book")
 async def book_trip(payload: BookingCreate, current_user: dict = Depends(get_current_user)):
     try:
-        # 🎯 REMOVE bank_name from this call if you removed it from BookingCreate
+        # 🎯 THE AUTOMATIC FIX: 
+        # Use current_user.get("full_name") so the user doesn't have to type it.
+        passenger_name = current_user.get("full_name") or current_user.get("username")
+
         booking_id = await trip_service.book_seat(
             user_id=str(current_user["_id"]),
-            sender_name=payload.senderName,
+            passenger_name=passenger_name, # Derived from the Account (DI)
+            sender_name=payload.senderName, # Derived from Payment Form
             trip_id=payload.trip_id,
             transaction_id=payload.transactionId,
             seat_layout=payload.seat_layout,
@@ -173,40 +186,60 @@ async def get_driver_history(current_user: dict = Depends(get_current_user)):
 
 @router.post("/{trip_id}/manual-seat")
 async def toggle_manual_seat(trip_id: str, payload: ManualSeatUpdate, current_user: dict = Depends(get_current_user)):
-    """Allows drivers to lock seats for Walk-in passengers and save it to the DB."""
+    """Allows drivers to lock seats for Walk-in passengers and manage seat availability."""
     
     trip = await trip_service.trip_repo.get_by_id(trip_id)
-    if str(trip["driver_id"]) != str(current_user["_id"]):
+    if not trip or str(trip["driver_id"]) != str(current_user["_id"]):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
-    # 1. Check if the seat is already in the manifest
+    # 1. Check current manifest
     manifest = await trip_service.booking_repo.get_trip_manifest(trip_id)
     existing_booking = next((b for b in manifest if payload.seat_id in b.get("seat_layout", [])), None)
 
-    # 2. If the driver clicks "Free", delete the walk-in
+    # 🛑 SECURITY CHECK: Never allow modification of real App Bookings
+    if existing_booking and existing_booking.get("passenger_name") != "Walk-in":
+        raise HTTPException(status_code=400, detail="Seat is reserved by an App user.")
+
+    # 🟢 ACTION: FREE THE SEAT
     if payload.action == "free":
         if existing_booking:
-            if existing_booking.get("passenger_name") != "Walk-in":
-                raise HTTPException(status_code=400, detail="Cannot free an App Booking manually.")
+            # If the seat was "Confirmed/Booked", we must put the seat back in the pool
+            if existing_booking.get("status") == "confirmed":
+                await trip_service.trip_repo.collection.update_one(
+                    {"_id": trip_service.trip_repo._to_id(trip_id)},
+                    {"$inc": {"available_seats": 1}} # Increment availability
+                )
             await trip_service.booking_repo.cancel_booking(existing_booking["id"])
-        return {"status": "success"}
+        return {"status": "success", "message": "Seat released"}
 
+    # 🟡 ACTION: HOLD OR BOOK
     db_status = "confirmed" if payload.action == "booked" else "pending"
 
-    # 3. Update existing or Create new Walk-in Booking
     if existing_booking:
-        if existing_booking.get("passenger_name") != "Walk-in":
-            raise HTTPException(status_code=400, detail="Seat is reserved by an App user.")
+        # If transitioning from 'pending' (Hold) to 'confirmed' (Booked), decrease seat count
+        if existing_booking.get("status") == "pending" and db_status == "confirmed":
+            await trip_service.trip_repo.collection.update_one(
+                {"_id": trip_service.trip_repo._to_id(trip_id)},
+                {"$inc": {"available_seats": -1}}
+            )
         
+        # If transitioning from 'confirmed' to 'pending', increase seat count
+        elif existing_booking.get("status") == "confirmed" and db_status == "pending":
+            await trip_service.trip_repo.collection.update_one(
+                {"_id": trip_service.trip_repo._to_id(trip_id)},
+                {"$inc": {"available_seats": 1}}
+            )
+
         await trip_service.booking_repo.collection.update_one(
             {"_id": trip_service.booking_repo._to_id(existing_booking["id"])},
             {"$set": {"status": db_status}}
         )
     else:
-        # Create a dummy passenger named "Walk-in"
+        # Create a new Walk-in Booking
         walk_in_doc = {
             "passenger_id": trip_service.booking_repo._to_id(str(current_user["_id"])), 
             "passenger_name": "Walk-in",
+            "is_manual": True, # 🔥 Pro addition: Explicitly mark as manual
             "trip_id": trip_service.booking_repo._to_id(trip_id),
             "amount": trip.get("price", 0),
             "trx_id": "CASH",
@@ -216,6 +249,7 @@ async def toggle_manual_seat(trip_id: str, payload: ManualSeatUpdate, current_us
         }
         await trip_service.booking_repo.collection.insert_one(walk_in_doc)
         
+        # Only decrease available seats if it's a confirmed booking, not a hold
         if db_status == "confirmed":
             await trip_service.trip_repo.collection.update_one(
                 {"_id": trip_service.trip_repo._to_id(trip_id)},

@@ -68,18 +68,7 @@ export default function DriverNavbar({ user, onOpenPayments, activeTab, totalEar
           {/* RIGHT: Stats & Actions */}
           <div className="flex items-center gap-2 md:gap-4">
             
-            {/* Soft Emerald Earnings Badge */}
-            <div className="flex items-center gap-2 md:gap-3 bg-emerald-50/60 border border-emerald-100/80 px-3 md:px-4 py-1.5 md:py-2 rounded-2xl">
-              <div className="w-7 h-7 md:w-8 md:h-8 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200/50">
-                <Banknote size={16} className="text-white" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[7px] md:text-[8px] font-black text-emerald-600/70 uppercase tracking-widest leading-none mb-1">Revenue</span>
-                <p className="text-xs md:text-sm font-black text-emerald-900 tabular-nums">
-                  {totalEarnings?.toLocaleString()} <span className="text-[9px] opacity-60 ml-0.5">PKR</span>
-                </p>
-              </div>
-            </div>
+           
 
             {/* Icons */}
             <div className="hidden md:flex items-center gap-2">
@@ -120,7 +109,7 @@ export default function DriverNavbar({ user, onOpenPayments, activeTab, totalEar
                   
                   <div className="space-y-1">
                     <DropdownItem onClick={() => {}} icon={<User size={16} />} label="My Profile" />
-                    <DropdownItem onClick={() => router.push('/dashboard/passenger')} icon={<UserCircle size={16} />} label="Switch to Passenger" />
+                    
                     
                     <div className="h-px bg-slate-100 my-1 mx-3" />
                     
