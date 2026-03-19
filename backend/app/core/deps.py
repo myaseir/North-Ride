@@ -88,3 +88,25 @@ async def require_verified_email(current_user: dict = Depends(get_current_user))
             detail="Please verify your email address to continue."
         )
     return current_user
+
+from app.repositories.booking_repo import BookingRepository
+from app.repositories.user_repo import UserRepository
+from app.services.trip_service import RatingService, TripService # Adjust path if needed
+
+def get_rating_service():
+    # Pass the repos into the service as defined in your __init__
+    return RatingService(
+        booking_repo=BookingRepository(),
+        user_repo=UserRepository()
+    )
+
+def get_trip_service():
+    return TripService()
+from app.services.trip_service import RatingService # Use your actual filename
+
+
+from app.repositories.booking_repo import BookingRepository
+
+def get_booking_repo():
+    """Factory function to provide a BookingRepository instance."""
+    return BookingRepository()

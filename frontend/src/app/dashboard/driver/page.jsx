@@ -16,6 +16,7 @@ import DriverTripCard from './components/DriverTripCard';
 import DriverSidebar from './components/DriverSidebar'; 
 import SedanCabinManager from './components/DriverAdmin'; 
 import RecentRides from './components/RecentRides';
+import DriverReviews from './components/DriverReviews';
 
 export default function DriverDashboard() {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function DriverDashboard() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [user, setUser] = useState(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [reviews, setReviews] = useState([]);
 
   /**
    * 📡 DATA FETCHING: Active Trips, History & Profile
@@ -61,16 +63,31 @@ export default function DriverDashboard() {
       const profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+
       if (profileRes.ok) {
         const profileData = await profileRes.json();
-        setUser(prev => ({ ...prev, wallet_balance: profileData.wallet_balance }));
-      }
+        
+        // Update the User stats (This shows the 4.8 / 5 stars)
+        setUser(prev => ({ 
+          ...prev, 
+          wallet_balance: profileData.wallet_balance,
+          rating_avg: profileData.rating_avg || 0,
+          rating_count: profileData.rating_count || 0
+        }));
 
+        // 🎯 THE FIX: Extract the list of comments
+        // Ensure your backend is sending 'recent_reviews' in the /me response
+        if (profileData.recent_reviews && Array.isArray(profileData.recent_reviews)) {
+          setReviews(profileData.recent_reviews); 
+        } else if (profileData.reviews && Array.isArray(profileData.reviews)) {
+          // Fallback if the key is just 'reviews'
+          setReviews(profileData.reviews);
+        }
+      }
     } catch (err) {
       console.error("📡 System Sync Error:", err);
     }
   }, []);
-
   /**
    * 🛡️ AUTH & IDENTITY GATE
    */
@@ -162,6 +179,11 @@ export default function DriverDashboard() {
 };
 
 const handleEndTrip = async (tripId) => {
+  // playPopSound(); // Ensure this is available in the scope
+  
+  const confirmed = window.confirm("Are you sure the ride is finished? This will clear the manifest.");
+  if (!confirmed) return;
+
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/trips/${tripId}/end`, {
       method: 'POST',
@@ -169,22 +191,21 @@ const handleEndTrip = async (tripId) => {
     });
     
     if (res.ok) {
-      toast.success("Ride Completed.");
+      toast.success("Ride Completed. Earnings added to wallet.");
       
-      // 1. Clear local state immediately so the "New Dispatch" form shows up
+      // 1. Clear active trips immediately
       setMyTrips([]); 
       
-      // 2. Wait a split second for the backend to finish archiving, then sync history
-      setTimeout(() => {
-        fetchData(user.token);
-      }, 1000); 
+      // 2. Refresh ALL data immediately to sync Wallet Balance + History
+      // No need for setTimeout if the backend is fast
+      await fetchData(user.token); 
 
     } else {
       const errorData = await res.json();
-      toast.error(errorData.detail || "Forbidden: Only the driver can end this.");
+      toast.error(errorData.detail || "Error finalizing ride.");
     }
   } catch (err) {
-    toast.error("Error finalizing ride.");
+    toast.error("Network error during finalization.");
   }
 };
 
@@ -303,6 +324,13 @@ const handleEndTrip = async (tripId) => {
           <div className="pt-4">
              <RecentRides rides={rideHistory} />
           </div>
+        <div className="pt-4">
+   <DriverReviews 
+     averageRating={user?.rating_avg || 0} 
+     totalReviews={user?.rating_count || 0}
+     reviews={reviews} // 🎯 Now passing the real fetched reviews!
+   />
+</div>
         </div>
       </main>
     </div>

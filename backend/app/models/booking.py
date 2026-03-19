@@ -38,6 +38,11 @@ class BookingInDB(BaseModel):
     manual_driver_contact_1: Optional[str] = None
     manual_driver_contact_2: Optional[str] = None
     
+    rating_popup_shown: bool = False  # The "One-Time" gatekeeper
+    rating: Optional[int] = None      # 1-5 Stars
+    review_text: Optional[str] = None # Optional user comment
+    rated_at: Optional[datetime] = None
+    
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     verified_at: Optional[datetime] = None
 

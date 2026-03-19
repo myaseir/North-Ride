@@ -104,17 +104,17 @@ const currentTotalBasePrice = basePricePerSeat * selectedSeats.length;
     return;
   }
 
-  // Calculate advance here if not already defined in the main body
-  const advancePayment = Math.ceil(finalPrice * 0.20);
+ 
 
   // Send the data using BOTH keys to ensure the parent catches it
-  onNext({ 
+ onNext({ 
     seats: selectedSeats.length, 
-    seatLayout: selectedSeats,      // For legacy support
-    seat_layout: selectedSeats,     // For the backend-ready payload
-    totalPrice: finalPrice,         // The full trip cost
-    advancePayment: advancePayment, // 🎯 Forward the 20% to the payment form
-    finalPrice: advancePayment,     // Overwriting finalPrice ensures legacy components charge 20%
+    seatLayout: selectedSeats,      
+    seat_layout: selectedSeats,     
+    totalPrice: finalPrice,         
+    advancePayment: advancePayment, 
+    // 🎯 CHANGE THIS LINE: Pass the 100% price instead of the 20%
+    finalPrice: finalPrice,     
     useDiscount 
   });
 };
@@ -219,65 +219,72 @@ const currentTotalBasePrice = basePricePerSeat * selectedSeats.length;
 
       {/* --- REWARD & FARE --- */}
       {availableDiscounts > 0 && selectedSeats.length > 0 && (
-        <label className="flex items-center justify-between p-4 border border-emerald-100 bg-emerald-50/50 rounded-[20px] cursor-pointer group hover:bg-emerald-50 transition-colors">
+        <label className="flex items-center justify-between p-3.5 border border-emerald-100 bg-emerald-50/70 rounded-2xl cursor-pointer group hover:bg-emerald-50 transition-colors">
           <div className="flex items-center gap-3 text-emerald-700">
-            <div className="p-2 bg-emerald-100 rounded-xl group-hover:bg-emerald-200 transition-colors">
+            <div className="p-2 bg-emerald-100/80 rounded-xl group-hover:bg-emerald-200 transition-colors">
               <Tag size={16} />
             </div>
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-widest block">Apply 10% Reward</span>
-              <span className="text-[9px] font-bold text-emerald-600/70">{availableDiscounts} available</span>
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">Apply 10% Reward</span>
+              <span className="text-[10px] font-semibold text-emerald-600">{availableDiscounts} available</span>
             </div>
           </div>
           <input 
             type="checkbox" 
             checked={useDiscount} 
             onChange={(e) => setUseDiscount(e.target.checked)}
-            className="w-5 h-5 accent-emerald-500 cursor-pointer"
+            className="w-5 h-5 accent-emerald-500 cursor-pointer rounded"
           />
         </label>
       )}
 
-      <div className="flex justify-between items-end px-2 pt-2">
-  <div>
-    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">Advance Amount</span>
-    <span className="text-[10px] font-black text-emerald-500 uppercase tracking-tight">20% to Reserve Seat</span>
-    {selectedSeats.length === 0 && (
-      <div className="flex items-center gap-1 text-[9px] font-black text-amber-500 uppercase mt-1">
-        <Info size={10} /> Tap a seat to select
-      </div>
-    )}
-  </div>
-  
-  <div className="text-right">
-    {/* Full Price Reference */}
-    <div className="flex flex-col mb-1">
-      {useDiscount && (
-        <span className="text-[10px] text-slate-400 line-through">
-          PKR {currentTotalBasePrice.toLocaleString()}
-        </span>
-      )}
-      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-        Total: PKR {finalPrice.toLocaleString()}
-      </span>
-    </div>
+      {/* --- PRICING SUMMARY --- */}
+      <div className="flex justify-between items-end px-1 pt-2">
+        
+        {/* Left Column: Context */}
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Advance Amount</span>
+          <span className="text-[11px] font-bold text-emerald-600">20% TO RESERVE</span>
+          {selectedSeats.length === 0 && (
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-500 uppercase mt-0.5">
+              <Info size={12} /> Tap a seat to select
+            </div>
+          )}
+        </div>
+        
+        {/* Right Column: Numbers */}
+        <div className="flex flex-col items-end text-right">
+          
+          {/* Full Price Reference */}
+          <div className="flex flex-col items-end mb-2">
+            {useDiscount && (
+              <span className="text-[11px] text-slate-400 line-through mb-0.5">
+                PKR {currentTotalBasePrice.toLocaleString()}
+              </span>
+            )}
+            <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
+              Total: PKR {finalPrice.toLocaleString()}
+            </span>
+          </div>
 
-    {/* The 20% Payable Amount */}
-    <div className="flex flex-col items-end">
-      <span className="text-[9px] font-black text-slate-900 uppercase bg-emerald-100 px-2 py-0.5 rounded-md mb-1">
-        Payable Now
-      </span>
-      <span className={`text-3xl font-black tracking-tighter transition-colors ${selectedSeats.length > 0 ? 'text-slate-900' : 'text-slate-300'}`}>
-        PKR {advancePayment.toLocaleString()}
-      </span>
-    </div>
-  </div>
-</div>
+          {/* The 20% Payable Amount */}
+          <div className="flex flex-col items-end mt-1">
+            <span className="text-[10px] font-bold text-emerald-700 uppercase bg-emerald-100/80 px-2 py-0.5 rounded mb-1">
+              Payable Now
+            </span>
+            {/* 🎯 Reduced from text-3xl to a clean, professional text-xl */}
+            <span className={`text-xl font-black tracking-tight transition-colors ${selectedSeats.length > 0 ? 'text-slate-900' : 'text-slate-300'}`}>
+              PKR {advancePayment.toLocaleString()}
+            </span>
+          </div>
+        </div>
+      </div>
 
       <button 
+        type="button"
         onClick={handleContinue}
         disabled={selectedSeats.length === 0}
-        className="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-900/10 hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-900"
+        className="w-full py-3.5 bg-slate-900 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-md hover:bg-emerald-600 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-900 flex items-center justify-center gap-2"
       >
         Proceed to Payment <ArrowRight size={16} />
       </button>

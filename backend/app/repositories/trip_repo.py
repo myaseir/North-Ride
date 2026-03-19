@@ -69,28 +69,17 @@ class TripRepository:
         return str(result.inserted_id)
 
     async def find_trips(self, origin: str, destination: str, date_str: Optional[str] = None) -> List[dict]:
-        query = {
+        """Finds trips matching the exact date with live Driver Info Enrichment."""
+        match_query = {
             "origin": origin.strip().lower(),
             "destination": destination.strip().lower(),
             "status": "scheduled",
             "available_seats": {"$gt": 0}
         }
-
         if date_str:
-            query["date"] = date_str
+            match_query["date"] = date_str
 
-    # PROFESSIONAL SORT: 
-    # 1. Date/Time (Soonest first)
-    # 2. Driver Rating (Highest first -> -1)
-    # 3. Price (Lowest first -> 1)
-        cursor = self.collection.find(query).sort([
-            ("departure_time", 1),
-            ("driver_rating", -1), 
-            ("price", 1)
-        ])
-    
-        trips = await cursor.to_list(length=100)
-        return [self._format_trip(t) for t in trips]
+        return await self._execute_enriched_search(match_query)
 
     async def get_driver_active_trip(self, driver_id: str) -> Optional[dict]:
         """
@@ -146,8 +135,8 @@ class TripRepository:
         return [self._format_trip(t) for t in trips]
 
     async def get_active_trips(self, origin: str, destination: str, date_str: Optional[str] = None) -> List[dict]:
-        """Secondary search method for nearest available logic."""
-        query = {
+        """Secondary search method for nearest available logic with live Driver Info Enrichment."""
+        match_query = {
             "origin": origin.strip().lower(),
             "destination": destination.strip().lower(),
             "status": "scheduled", 
@@ -156,31 +145,72 @@ class TripRepository:
         
         if date_str:
             try:
+                # Keep your existing specific timezone logic for this query
                 search_date = datetime.fromisoformat(date_str.replace('Z', '')).replace(
                     hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone.utc
                 )
-                query["departure_time"] = {"$gte": search_date}
+                match_query["departure_time"] = {"$gte": search_date}
             except ValueError:
                 logger.warning(f"Invalid date format: {date_str}")
 
-        cursor = self.collection.find(query).sort("departure_time", 1)
-        trips = await cursor.to_list(length=100)
-        return [self._format_trip(t) for t in trips]
+        # 🎯 Use the new pipeline instead of the old cursor.find()
+        return await self._execute_enriched_search(match_query)
     
     async def find_upcoming_trips(self, origin: str, destination: str, date_str: str, limit: int = 20) -> List[dict]:
-        """
-        Fallback Search: Finds rides AFTER the requested date if the exact date is empty.
-        """
-        query = {
+        """Finds fallback trips for future dates with live Driver Info Enrichment."""
+        match_query = {
             "origin": origin.strip().lower(),
             "destination": destination.strip().lower(),
             "status": "scheduled",
-            "available_seats": {"$gt": 0},
-            "date": {"$gt": date_str}  # Find anything strictly after the searched date
+            "available_seats": {"$gt": 0}
         }
+        if date_str:
+            match_query["date"] = {"$gt": date_str}  # Strictly AFTER the searched date
 
-    # Sort by date and time so the closest future rides show first
-        cursor = self.collection.find(query).sort([("date", 1), ("departure_time", 1)]).limit(limit)
-        trips = await cursor.to_list(length=limit)
+        return await self._execute_enriched_search(match_query, limit)
     
+    async def _execute_enriched_search(self, match_query: dict, limit: int = 100) -> List[dict]:
+        pipeline = [
+            {"$match": match_query},
+            {
+                # 1. Join with the Users collection to get the Driver's live profile
+                "$lookup": {
+                    "from": "users",
+                    "let": { "d_id": "$driver_id" },
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "$expr": { "$eq": ["$_id", { "$toObjectId": "$$d_id" }] }
+                            }
+                        }
+                    ],
+                    "as": "driver_info"
+                }
+            },
+            # 2. Flatten the array
+            {"$unwind": {"path": "$driver_info", "preserveNullAndEmptyArrays": True}},
+            # 3. Inject the live name and ratings into the trip data
+            {
+                "$addFields": {
+                    "listing_driver_name": { "$ifNull": ["$driver_info.full_name", "$driver_info.username", "Glacia Captain"] },
+                    "rating_avg": { "$ifNull": ["$driver_info.rating_avg", "$driver_info.driver_rating", 0] },
+                    "rating_count": { "$ifNull": ["$driver_info.rating_count", "$driver_info.review_count", 0] }
+                }
+            },
+            # 4. Remove the bulky user object so we only send what we need
+            {"$project": {"driver_info": 0}},
+            # 5. Sort by Soonest Departure, then Highest Rating, then Lowest Price
+            {"$sort": {"departure_time": 1, "rating_avg": -1, "price": 1}},
+            {"$limit": limit}
+        ]
+        
+        cursor = self.collection.aggregate(pipeline)
+        trips = await cursor.to_list(length=limit)
+        
+        # Format the ObjectIds to strings before returning
         return [self._format_trip(t) for t in trips]
+    
+    
+        
+        # Inside repo/trip_repo.py
+    

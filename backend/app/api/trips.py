@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status,Response
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone,timedelta
 from bson import ObjectId
 from app.db.mongodb import db
 from pydantic import BaseModel
@@ -8,6 +8,16 @@ from app.core.deps import get_current_user
 from app.models.trip import TripCreate, TripUpdate, TripInDB
 from app.models.booking import BookingCreate, BookingInDB
 from app.services.trip_service import TripService
+from app.services.trip_service import RatingService
+from app.repositories.booking_repo import BookingRepository  # 🎯 Import the class
+from app.core.deps import get_booking_repo                  # 🎯 Import the provider# 🎯 Import the class
+# In trip.py
+from app.core.deps import (
+    get_current_user, 
+    get_trip_service, 
+    get_rating_service # 🎯 Now this will work!
+)
+from app.models.rating import RatingSubmit
 import logging
 
 # Initialize logging to capture errors in the terminal
@@ -69,11 +79,19 @@ async def get_active_trip(current_user: dict = Depends(get_current_user)):
         if active_trip_id:
             trip = await trip_service.trip_repo.get_by_id(str(active_trip_id))
     
-    # 3. If still no trip, return the 404
+    # 🎯 3. THE FIX: Reject completed/cancelled trips
+    # If we found a trip, but it's already done, we must NOT return it.
+    if trip and trip.get("status") not in ["scheduled", "in-progress"]:
+        # Heal the database: remove the stuck ID from the user's profile
+        await trip_service.user_repo.set_active_trip(user_id_str, None)
+        trip = None # Set to None so it triggers the 404 below
+    
+    # 4. If still no trip (or if we just rejected it), return the 404
+    # This 404 is what tells your PassengerDashboard to show the Search Box!
     if not trip:
         raise HTTPException(status_code=404, detail="No active trip found for this user")
 
-    # 4. Cleanup and Manifest (Existing logic)
+    # 5. Cleanup and Manifest 
     manifest = await trip_service.booking_repo.get_trip_manifest(trip["id"])
     cleaned_passengers = []
     for b in manifest:
@@ -101,20 +119,37 @@ async def end_trip(trip_id: str, current_user: dict = Depends(get_current_user))
 # --- PASSENGER ENDPOINTS ---
 
 @router.get("/search")
-async def search_trips(origin: str, destination: str, date: Optional[str] = None):
-    """Passenger search route with strict ranking and fallback."""
+async def search_trips(
+    origin: str, 
+    destination: str, 
+    date: Optional[str] = None,
+    trip_service: TripService = Depends(get_trip_service) 
+):
+    """Passenger search route with Driver Rating ranking and fallback."""
     
-    # 1. Fetch trips (The ranking/next-day logic should be inside this service call)
+    # --- 1. THE TIMEZONE FIX ---
+    # Force the server to calculate "today" using Pakistan time (UTC+5)
+    pkt_timezone = timezone(timedelta(hours=5))
+    today_date = datetime.now(pkt_timezone).strftime("%Y-%m-%d")
+    
+    if date and date < today_date:
+        raise HTTPException(status_code=400, detail="Cannot search for rides in the past.")
+
+    # 2. Fetch trips 
     trips = await trip_service.search_trips(origin, destination, date)
     
-    # 2. Professional Data Transformation
-    # Instead of a manual loop with 'del', we map it to a clean dictionary
+    # 3. Professional Data Transformation
     return [
         {
             **trip,
             "id": str(trip["_id"]),
             "driver_id": str(trip.get("driver_id")) if trip.get("driver_id") else None,
-            "_id": None # Most frameworks handle removing nulls automatically
+            
+            # The rating fallbacks we added
+            "driver_rating": trip.get("rating_avg", trip.get("driver_rating", 0.0)),
+            "review_count": trip.get("rating_count", trip.get("review_count", 0)),
+            
+            "_id": None 
         }
         for trip in trips
     ]
@@ -177,12 +212,54 @@ async def book_trip(payload: BookingCreate, current_user: dict = Depends(get_cur
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/history")
-async def get_driver_history(current_user: dict = Depends(get_current_user)):
+async def get_unified_history(
+    current_user: dict = Depends(get_current_user),
+    booking_repo: BookingRepository = Depends(get_booking_repo),
+    trip_service: TripService = Depends(get_trip_service)
+):
     """
-    Fetches the deployment history for the Driver Sidebar.
+    Unified history endpoint for both Drivers and Passengers.
+    Ensures all ObjectIds are converted to strings to prevent JSON errors.
     """
-    # Use the service layer (which then calls the repo method we just added)
-    return await trip_service.trip_repo.get_history(str(current_user["_id"]))
+    user_id = str(current_user["_id"])
+    roles = current_user.get("roles", [])
+    
+    combined_history = []
+
+    # 1. Fetch Driver History
+    if "DRIVER" in roles:
+        driver_trips = await trip_service.trip_repo.get_history(user_id)
+        for t in driver_trips:
+            t["history_type"] = "driver"
+            # 🔥 CRITICAL: Convert _id to string if not already done
+            if "_id" in t:
+                t["id"] = str(t["_id"])
+                t["_id"] = t["id"]
+        combined_history.extend(driver_trips)
+
+    # 2. Fetch Passenger History (This uses your $lookup enrichment)
+    passenger_bookings = await booking_repo.get_passenger_history(user_id)
+    for b in passenger_bookings:
+        b["history_type"] = "passenger"
+        # 🔥 CRITICAL: Convert all potential ObjectIds
+        if "_id" in b:
+            b["id"] = str(b["_id"])
+            b["_id"] = b["id"]
+        if "trip_id" in b:
+            b["trip_id"] = str(b["trip_id"])
+    combined_history.extend(passenger_bookings)
+
+    # 3. Sort by date (Newest First)
+    combined_history.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+
+    # 4. FINAL SAFETY CHECK: Remove any remaining raw ObjectIds
+    # This prevents the 500 Internal Server Error you are seeing
+    for item in combined_history:
+        for key, value in item.items():
+            if isinstance(value, ObjectId):
+                item[key] = str(value)
+
+    return combined_history
 
 @router.post("/{trip_id}/manual-seat")
 async def toggle_manual_seat(trip_id: str, payload: ManualSeatUpdate, current_user: dict = Depends(get_current_user)):
@@ -257,4 +334,36 @@ async def toggle_manual_seat(trip_id: str, payload: ManualSeatUpdate, current_us
             )
 
     return {"status": "success"} 
+
+@router.get("/active/check-rating")
+async def check_pending_rating(
+    current_user = Depends(get_current_user),
+    rating_service: RatingService = Depends(get_rating_service)
+):
+    # 🎯 FIX: Use ['id'] instead of .id
+    user_id = current_user.get("id") or str(current_user.get("_id"))
+    
+    popup_data = await rating_service.get_popup_data(user_id)
+    if not popup_data:
+        return Response(status_code=204)
+    
+    return popup_data
+
+@router.post("/active/rate")
+async def submit_trip_rating(
+    rating_data: RatingSubmit, # 🎯 Using the Pydantic model we created
+    current_user = Depends(get_current_user),
+    rating_service: RatingService = Depends(get_rating_service)
+):
+    """
+    Saves the stars and review, then updates the Driver's global average.
+    """
+    await rating_service.add_rating(
+        booking_id=rating_data.booking_id,
+        rating=rating_data.rating,
+        review=rating_data.review_text
+    )
+    return {"message": "Rating processed and driver stats updated"}
+
+
 

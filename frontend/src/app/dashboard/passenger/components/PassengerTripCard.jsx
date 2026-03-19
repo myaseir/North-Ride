@@ -1,13 +1,24 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clock, User, ArrowRight, Star } from 'lucide-react';
 import BookingModal from './BookingModal';
 
 export default function PassengerTripCard({ trip, availableDiscounts, onBook }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  // 🕵️‍♂️ DEBUGGING: Check exactly what the backend is passing to this card
+  useEffect(() => {
+    console.log("📦 Trip Data received in PassengerTripCard:", trip);
+  }, [trip]);
+
+  // Base Data Extraction
   const basePricePerSeat = trip.fare || trip.price || 0;
   const availableSeats = trip.available_seats || 3;
+
+  // STRICT ALIGNMENT WITH YOUR trip.py /search ENDPOINT
+  const driverName = trip.listing_driver_name || trip.driver_name || 'Glacia Captain';
+  const rating = Number(trip.driver_rating) || 0;
+  const reviewCount = Number(trip.review_count) || 0;
 
   return (
     <>
@@ -15,19 +26,45 @@ export default function PassengerTripCard({ trip, availableDiscounts, onBook }) 
         
         <div className="flex justify-between items-start mb-6">
           <div className="flex items-center gap-3">
+            {/* Driver Avatar */}
             <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center overflow-hidden">
                <User size={20} className="text-white/40" />
             </div>
+            
+            {/* Driver Name & Rating Logic */}
             <div>
               <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">
-                {trip.driver_name || 'Glacia Captain'}
+                {driverName}
               </h4>
-              <div className="flex items-center gap-1 text-amber-500 mt-0.5">
-                <Star size={10} fill="currentColor" />
-                <span className="text-[10px] font-black">{trip.driver_rating || '5.0'}</span>
+              <div className="flex items-center gap-2 mt-1">
+                {rating > 0 ? (
+                  <>
+                    {/* Rated State */}
+                    <div className="flex items-center gap-1 text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-100/50">
+                      <Star size={10} fill="currentColor" />
+                      <span className="text-[10px] font-black">{rating.toFixed(1)}</span>
+                    </div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                      • {reviewCount} {reviewCount === 1 ? 'Ride' : 'Rides'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    {/* No Rating / 0 Rides State */}
+                    <div className="flex items-center gap-1 text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded-md border border-slate-100">
+                      <Star size={10} className="text-slate-300" />
+                      <span className="text-[10px] font-black uppercase">No Rating</span>
+                    </div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                      • 0 Rides
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
+
+          {/* Pricing */}
           <div className="text-right">
             <span className="text-2xl font-black leading-none text-slate-900">
               {basePricePerSeat.toLocaleString()}
@@ -36,6 +73,7 @@ export default function PassengerTripCard({ trip, availableDiscounts, onBook }) 
           </div>
         </div>
 
+        {/* Route Visualizer */}
         <div className="space-y-4 relative mb-6 pl-2">
           <div className="absolute left-[17px] top-4 bottom-4 w-[2px] bg-slate-100"></div>
           <div className="flex items-center gap-4 relative bg-white">
@@ -48,22 +86,23 @@ export default function PassengerTripCard({ trip, availableDiscounts, onBook }) 
           </div>
         </div>
 
+        {/* Footer Data & CTA */}
         <div className="pt-5 border-t border-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4 w-full sm:w-auto">
             <div className="flex items-center gap-1.5 text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl">
-  <Clock size={12} />
-  <span className="text-[10px] font-black uppercase tracking-widest">
-    {trip.departure_time ? (
-      new Intl.DateTimeFormat('en-GB', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      }).format(new Date(trip.departure_time))
-    ) : (
-      'Immediate'
-    )}
-  </span>
-</div>
+              <Clock size={12} />
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                {trip.departure_time ? (
+                  new Intl.DateTimeFormat('en-GB', {
+                    day: 'numeric',
+                    month: 'short', 
+                    year: 'numeric'
+                  }).format(new Date(trip.departure_time))
+                ) : (
+                  'Immediate'
+                )}
+              </span>
+            </div>
             <div className="flex items-center gap-1.5 text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl">
               <User size={12} />
               <span className="text-[10px] font-black uppercase tracking-widest">{availableSeats} Seats Left</span>
@@ -85,7 +124,7 @@ export default function PassengerTripCard({ trip, availableDiscounts, onBook }) 
         onClose={() => setIsModalOpen(false)}
         trip={trip}
         availableDiscounts={availableDiscounts}
-        onConfirm={onBook} // Passes the final payload straight to page.js handler
+        onConfirm={onBook} 
       />
     </>
   );

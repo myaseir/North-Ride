@@ -17,12 +17,28 @@ export default function ActiveTripStatus({ trip, currentUserEmail, onRefresh }) 
 
   // --- TRIP DATA LOGIC ---
   // Find current user's specific booking to check verification status
-  const myBooking = trip?.passengers?.find(
-    p => p.passenger_id === trip?.current_user_id || p.email?.toLowerCase() === currentUserEmail?.toLowerCase()
-  ) || null;
-  
-  const isApproved = myBooking?.payment_verified === true && myBooking?.status === 'confirmed';
+  // --- TRIP DATA LOGIC (Universal Unlock) ---
+  const { myBooking, isApproved } = React.useMemo(() => {
+    if (!trip?.passengers) return { myBooking: null, isApproved: false };
 
+    // 🎯 THE FIX: Find the first booking that is confirmed and has driver data.
+    // We ignore "Walk-in" to ensure we get a real app booking.
+    const confirmedBooking = trip.passengers.find(p => 
+      (p.status === 'confirmed' || p.payment_verified === true) && 
+      p.passenger_name !== "Walk-in"
+    );
+
+    // If no confirmed app booking, fall back to YOUR booking (even if pending)
+    const fallbackBooking = trip.passengers.find(p => 
+      String(p.passenger_id) === String(trip?.current_user_id) || 
+      p.email?.toLowerCase() === currentUserEmail?.toLowerCase()
+    );
+
+    return { 
+      myBooking: confirmedBooking || fallbackBooking || trip.passengers[0], 
+      isApproved: !!confirmedBooking 
+    };
+  }, [trip, currentUserEmail]);
   // Formatting Date: "17 March 2026"
   const formatDate = (dateStr) => {
     if (!dateStr) return "Date TBD";
@@ -90,6 +106,18 @@ export default function ActiveTripStatus({ trip, currentUserEmail, onRefresh }) 
       setIsSubmitting(false);
     }
   };
+// --- ADD THIS INSIDE ActiveTripStatus ---
+useEffect(() => {
+  if (trip?.status === 'completed') {
+    // 🎯 If the trip is completed, tell the parent (PassengerDashboard) 
+    // to refresh. This will trigger fetchDashboardData, see that 
+    // active_trip_id is now null, and remove this component.
+    if (onRefresh) onRefresh();
+    
+    // Optional: Success toast for the passenger
+    toast.success("Ride completed! Welcome back.");
+  }
+}, [trip?.status, onRefresh]);
 
   return (
     <div className="w-full max-w-md mx-auto p-3 space-y-4 font-sans">

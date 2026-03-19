@@ -248,3 +248,127 @@ class BookingRepository:
             if "passenger_id" in r: r["passenger_id"] = str(r["passenger_id"])
             if "trip_id" in r: r["trip_id"] = str(r["trip_id"])
         return results
+    
+    async def get_passenger_history(self, passenger_id: str):
+        """Fetches all completed or cancelled bookings for a passenger."""
+        cursor = self.collection.find({
+            "passenger_id": self._to_id(passenger_id)
+        }).sort("created_at", -1) # Latest first
+    
+        return await cursor.to_list(length=50)
+
+    async def get_unrated_booking_for_popup(self, user_id: str) -> Optional[dict]:
+        """
+        Finds a completed booking that hasn't triggered a popup yet.
+        🎯 The 'One-Time' Logic: We flip the flag to True immediately.
+        """
+        # 1. Search for a candidate
+        booking = await self.collection.find_one({
+            "passenger_id": self._to_id(user_id),
+            "status": "completed",
+            "rating_popup_shown": False
+        })
+
+        if not booking:
+            return None
+
+        # 2. FLIP THE FLAG IMMEDIATELY 
+        # This prevents the popup from showing again on the next refresh
+        await self.collection.update_one(
+            {"_id": booking["_id"]},
+            {"$set": {"rating_popup_shown": True}}
+        )
+
+        # 3. Clean up IDs for frontend
+        booking["id"] = str(booking["_id"])
+        return booking
+
+    async def save_rating_results(self, booking_id: str, rating: int, review: str):
+        """Saves the actual star rating and text to the booking."""
+        return await self.collection.update_one(
+            {"_id": self._to_id(booking_id)},
+            {"$set": {
+                "rating": rating,
+                "review_text": review,
+                "rated_at": datetime.now(timezone.utc)
+            }}
+        )
+    
+    def _format_booking(self, booking: dict) -> dict:
+        """Manual ID string conversion for JSON safety (The 'Driver Repo' Style)"""
+        if booking:
+            # Standardize the IDs
+            booking["id"] = str(booking.get("_id"))
+            booking["_id"] = booking["id"]
+            
+            if "trip_id" in booking:
+                booking["trip_id"] = str(booking["trip_id"])
+            if "passenger_id" in booking:
+                booking["passenger_id"] = str(booking["passenger_id"])
+            
+            # Ensure price field name consistency for the UI
+            if "total_price" not in booking and "amount" in booking:
+                booking["total_price"] = booking["amount"]
+                
+        return booking
+
+    async def get_passenger_history(self, passenger_id: str) -> list[dict]:
+        """
+        Fetches enriched history. 
+        Joins 'bookings' with 'trips' to get Route and Driver info.
+        """
+        pipeline = [
+        # 1. Find bookings for this passenger
+            {
+            "$match": {
+            "passenger_id": self._to_id(passenger_id),
+            "status": {"$in": ["confirmed", "completed", "cancelled"]}
+            }},
+        # 2. Join with Trips collection to get Route (Origin/Destination)
+        {
+                "$lookup": {
+                    "from": "trips",
+                    "localField": "trip_id",
+                    "foreignField": "_id",
+                    "as": "trip_details"
+            }
+        },
+        {   "$unwind": {"path": "$trip_details", "preserveNullAndEmptyArrays": True}},
+        # 3. Clean up the output for the Frontend
+        {
+                "$project": {
+                    "id": {"$toString": "$_id"},
+                    "trip_id": {"$toString": "$trip_id"},
+                    "status": 1,
+                    "rating": 1,
+                    "review_text": 1,
+                    "created_at": 1,
+                    "total_price": {"$ifNull": ["$total_price", "$amount"]},
+                    # 🎯 Pulling enriched details from the joined Trip
+                    "origin": {"$ifNull": ["$trip_details.origin", "Unknown"]},
+                    "destination": {"$ifNull": ["$trip_details.destination", "Unknown"]},
+                    "final_driver_name": {
+                    "$ifNull": ["$final_driver_name", "$trip_details.listing_driver_name", "Captain"]
+                }
+            }
+        },
+        {   "$sort": {"created_at": -1}}
+    ]
+    
+        results = await self.collection.aggregate(pipeline).to_list(length=50)
+        return results
+    
+    async def get_all_ratings_for_driver(self, driver_id: str) -> list[dict]:
+        """
+        Fetches all bookings for a specific driver that contain a rating.
+        Used to calculate the driver's global average.
+        """
+        query = {
+            "driver_id": self._to_id(driver_id),
+            "rating": {"$exists": True, "$ne": None}  # Only get bookings that actually have a rating
+        }
+        
+        cursor = self.collection.find(query)
+        ratings = await cursor.to_list(length=None) 
+        
+        return ratings

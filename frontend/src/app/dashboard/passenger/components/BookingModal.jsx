@@ -74,21 +74,19 @@ const handleFinalSubmit = async (paymentData) => {
     const token = localStorage.getItem("token");
     
     try {
-      const payload = {
-    trip_id: trip.id || trip._id,
-    seat_layout: bookingData.seat_layout, 
-    transactionId: String(paymentData.transactionId),
-    senderName: String(paymentData.senderName), // This is the person who PAID
-    
-    // 🎯 THE FIX: Add the passenger's name (The person TRAVELING)
-    // Pull this from your booking form state (e.g., bookingData.passenger_name)
-    passenger_name: String(bookingData.passenger_name || paymentData.senderName), 
-    
-    account_number: String(paymentData.account_number), 
-    amount_paid: parseFloat(paymentData.amount_paid || paymentData.amount), 
-    
-    apply_discount: Boolean(bookingData.useDiscount)
-};
+        const payload = {
+            trip_id: trip.id || trip._id,
+            seat_layout: bookingData.seat_layout, 
+            transactionId: String(paymentData.transactionId),
+            senderName: String(paymentData.senderName),
+            
+            // 🎯 THE FIX: Use paymentData.amount (from the form) 
+            // and map it to amount_paid (for the backend)
+            account_number: String(paymentData.account_number), 
+            amount_paid: parseFloat(paymentData.amount_paid || paymentData.amount), 
+            
+            apply_discount: Boolean(bookingData.useDiscount)
+        };
 
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/trips/book`, {
             method: 'POST',

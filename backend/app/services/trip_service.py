@@ -4,7 +4,7 @@ from app.repositories.user_repo import UserRepository  # 🎯 Added
 from app.db.redis import redis_mgr 
 from fastapi import HTTPException, status
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -155,23 +155,45 @@ class TripService:
         """Finalizes trip and clears active status for all participants."""
         trip = await self.trip_repo.get_by_id(trip_id)
         if not trip:
-             raise HTTPException(status_code=404, detail="Trip not found")
+            raise HTTPException(status_code=404, detail="Trip not found")
 
         if str(trip["driver_id"]) != str(driver_id):
             raise HTTPException(status_code=403, detail="Unauthorized.")
 
+    # 🎯 FIX 1: Move Manifest fetch to the TOP.
+    # We need the list of confirmed passengers BEFORE we change their status.
         manifest = await self.booking_repo.get_trip_manifest(trip_id)
-        total_revenue = sum(b.get("amount", 0) for b in manifest if b["status"] == "confirmed")
-        
-        # 1. Update Trip Status
+
+    # 1. Update Trip Status
         await self.trip_repo.update_trip_status(trip_id, "completed")
 
-        # 2. 🎯 CLEANUP: Unlink all passengers so they can book again
+    # 2. Update ALL bookings for this trip to "completed"
+        await self.booking_repo.collection.update_many(
+            {
+                "trip_id": self.booking_repo._to_id(trip_id), 
+                "status": "confirmed"
+            },
+            {
+                "$set": {
+                    "status": "completed",
+                    "completed_at": datetime.now(timezone.utc),
+                    "rating_popup_shown": False,
+                    "driver_id": self.booking_repo._to_id(driver_id) # 🎯 Added for rating calculation
+                }
+            }
+        )
+
+    # 3. Calculate revenue (Manifest is already fetched at the top)
+        total_revenue = sum(b.get("amount", 0) for b in manifest if b["status"] in ["confirmed", "completed"])
+
+    # 4. 🎯 CLEANUP: Unlink all passengers
+    # This loop will now work because 'manifest' contains the passengers!
         for booking in manifest:
             passenger_id = str(booking.get("passenger_id"))
-            await self.user_repo.set_active_trip(passenger_id, None)
+            if passenger_id and passenger_id != "None":
+                await self.user_repo.set_active_trip(passenger_id, None)
 
-        # 3. 🎯 CLEANUP: Unlink the driver
+    # 5. CLEANUP: Unlink the driver
         await self.user_repo.set_active_trip(driver_id, None)
 
         return {"status": "success", "earnings": total_revenue}
@@ -238,14 +260,15 @@ class TripService:
     # We apply a multi-level sort (Weighted Scoring)
     # Priority: Date (Asc) -> Driver Rating (Desc) -> Price (Asc)
     
+        # --- 1. THE RANKING BASIS (Sorting Logic) ---
         def get_ranking_score(trip):
-        # We use a tuple for sorting:
-        # 1. Date (earliest first)
-        # 2. Rating (inverse it so higher rating comes first: e.g., 5.0 becomes -5.0)
-        # 3. Price (lowest first)
+            # 🎯 FIX: Check for rating_avg (new) or driver_rating (old)
+            # Default to 0 if no rating exists
+            rating = trip.get("rating_avg") or trip.get("driver_rating") or 0
+            
             return (
                 trip.get("date"), 
-                -trip.get("driver_rating", 0), 
+                -float(rating), # Higher rating = lower number for sorting
                 trip.get("price", 0)
             )
 
@@ -261,3 +284,67 @@ class TripService:
                 trip["ui_label"] = "Suggested Future Ride"
 
         return trips
+    async def get_passenger_ride_history(self, passenger_id: str):
+        """
+        Fetches and formats the history for a passenger.
+        🎯 Logic: Get bookings -> Enrich with Trip details.
+        """
+        # 1. Get raw bookings from repo
+        bookings = await self.booking_repo.get_passenger_history(passenger_id)
+        
+        enriched_history = []
+        for b in bookings:
+            # 2. We need to make sure the data is 'UI-Ready'
+            # If your booking doesn't have the route names, fetch them from the trip
+            ride_entry = {
+                "id": str(b["_id"]),
+                "origin": b.get("origin", "Unknown"),
+                "destination": b.get("destination", "Unknown"),
+                "total_price": b.get("amount", 0),
+                "status": b.get("status", "completed"),
+                "created_at": b.get("created_at"),
+                "rating": b.get("rating"), # 🎯 Added for the History UI
+                "review_text": b.get("review_text"),
+                "final_driver_name": b.get("final_driver_name", "Driver")
+            }
+            enriched_history.append(ride_entry)
+            
+        return enriched_history
+class RatingService:
+    def __init__(self, booking_repo, user_repo):
+        self.booking_repo = booking_repo
+        self.user_repo = user_repo
+        
+    async def get_popup_data(self, user_id: str):
+        """Checks if a user is due for a one-time rating popup."""
+        booking = await self.booking_repo.get_unrated_booking_for_popup(user_id)
+        if not booking:
+            return None
+        
+        return {
+            "booking_id": booking["id"],
+            "driver_name": booking.get("final_driver_name", "Driver"),
+            "driver_id": str(booking.get("driver_id", ""))
+        }
+
+    async def add_rating(self, booking_id: str, rating: int, review: str):
+        """Saves the rating and updates the driver's global average."""
+        # 1. Save the individual review
+        await self.booking_repo.save_rating_results(booking_id, rating, review)
+
+        # 2. Find the Driver to update their reputation
+        booking = await self.booking_repo.get_by_id(booking_id)
+        driver_id = booking.get("driver_id")
+        
+        if driver_id:
+            # 3. Calculate New Average
+            # Get all ratings for this driver from the bookings collection
+            all_ratings = await self.booking_repo.get_all_ratings_for_driver(driver_id)
+            
+            if all_ratings:
+                total_stars = sum(r['rating'] for r in all_ratings if r.get('rating'))
+                count = len([r for r in all_ratings if r.get('rating')])
+                new_avg = total_stars / count if count > 0 else 0
+                
+                # 4. Push the new average to the Driver's Profile
+                await self.user_repo.update_driver_average_rating(driver_id, new_avg, count)

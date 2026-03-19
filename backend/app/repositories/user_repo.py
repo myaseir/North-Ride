@@ -164,3 +164,14 @@ class UserRepository:
             {"_id": self._to_id(user_id)},
             {"$set": {"active_trip_id": target_id}}
         )
+        
+    async def update_driver_average_rating(self, driver_id: str, new_avg: float, count: int):
+        """Updates the driver's public profile with their latest rating stats."""
+        # Because we are in UserRepository, self.collection correctly points to db.db.users!
+        await self.collection.update_one(
+            {"_id": self._to_id(driver_id)},
+            {"$set": {
+                "rating_avg": round(new_avg, 1),
+                "rating_count": count
+            }}
+        )

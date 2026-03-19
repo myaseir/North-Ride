@@ -12,6 +12,7 @@ import PassengerActivitySidebar from './components/PassengerActivitySidebar';
 import PassengerRecentRides from './components/PassengerRecentRides';
 import ReferralWidget from './components/ReferralWidget';
 import ActiveTripStatus from './components/ActiveTripStatus';
+import RatingPopup from './components/RatingPopup';
 
 export default function PassengerDashboard() {
   const router = useRouter();
@@ -20,6 +21,8 @@ export default function PassengerDashboard() {
   const [user, setUser] = useState(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
   
+  const [showRating, setShowRating] = useState(false);
+const [ratingData, setRatingData] = useState(null);
   // Data States
   const [searchResults, setSearchResults] = useState([]);
   const [recentRides, setRecentRides] = useState([]);
@@ -31,9 +34,7 @@ export default function PassengerDashboard() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
-  // --- 1. CORE HYDRATION & BACKEND SYNC ---
-  
-  const fetchDashboardData = useCallback(async (token) => {
+ const fetchDashboardData = useCallback(async (token) => {
     try {
       const [ridesRes, referralRes, activeRes] = await Promise.all([
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/trips/history`, { 
@@ -76,6 +77,53 @@ export default function PassengerDashboard() {
       console.warn("Sync incomplete:", err);
     }
   }, []);
+
+
+
+  useEffect(() => {
+  const checkPendingRating = async () => {
+    const token = localStorage.getItem("token");
+    if (!token || !isAuthorized) return;
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/trips/active/check-rating`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (res.status === 200) {
+        const data = await res.json();
+        setRatingData(data);
+        setShowRating(true);
+      }
+    } catch (err) {
+      console.warn("Rating check failed:", err);
+    }
+  };
+
+  checkPendingRating();
+}, [isAuthorized]);
+const handleRatingSubmit = useCallback(async (payload) => {
+  const token = localStorage.getItem("token");
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/trips/active/rate`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` 
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      // 🎯 Refresh the data so Recent Rides shows the new stars immediately
+      fetchDashboardData(token); 
+      setShowRating(false);
+    }
+  } catch (err) {
+    toast.error("Could not save rating.");
+  }
+}, [fetchDashboardData]);
+  
   
 
   useEffect(() => {
@@ -258,11 +306,13 @@ export default function PassengerDashboard() {
         <div className="lg:col-span-4 space-y-6">
           <section className="bg-white p-8 rounded-[40px] shadow-2xl shadow-emerald-900/5 border border-emerald-100/50">
             {activeTripDetails ? (
-              <ActiveTripStatus 
-                trip={activeTripDetails} 
-                availableDiscounts={referralStats.availableDiscounts}
-                onAddSeats={(bookingData) => handleBookRide(activeTripDetails.id, bookingData)}
-              />
+             <ActiveTripStatus 
+  trip={activeTripDetails} 
+  currentUserEmail={user?.email} // 🎯 Pass the email
+  availableDiscounts={referralStats.availableDiscounts}
+  onRefresh={() => fetchDashboardData(user?.token)} // 🎯 Add refresh capability
+  onAddSeats={(bookingData) => handleBookRide(activeTripDetails.id || activeTripDetails._id, bookingData)}
+/>
             ) : (
               <div>
                 <div className="flex items-center gap-3 mb-8">
@@ -306,13 +356,28 @@ export default function PassengerDashboard() {
                 </div>
               )
             ) : (
-              <PassengerRecentRides rides={recentRides} />
+              // 🎯 UPDATE BOTH PLACES WHERE THIS COMPONENT IS CALLED
+<PassengerRecentRides 
+  rides={recentRides} 
+  onRefresh={() => fetchDashboardData(user?.token)} 
+/>
             )}
           </div>
         </div>
       </main>
 
       <PassengerActivitySidebar isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+        {/* 🎯 RATING MODAL */}
+      {showRating && ratingData && (
+        <RatingPopup 
+          data={ratingData} 
+          onClose={() => setShowRating(false)} 
+          onSubmit={handleRatingSubmit}
+        />
+      )}
     </div>
+ 
+   
   );
 }
