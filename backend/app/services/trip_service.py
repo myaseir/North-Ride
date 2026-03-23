@@ -177,6 +177,7 @@ class TripService:
             {
                 "$set": {
                     "status": "completed",
+                    "payout_status": "pending",
                     "completed_at": datetime.now(timezone.utc),
                     "rating_popup_shown": False,
                     "driver_id": self.booking_repo._to_id(driver_id) 
@@ -319,6 +320,47 @@ class TripService:
             enriched_history.append(ride_entry)
         
         return enriched_history
+    
+    async def get_driver_ledger(self, driver_id: str):
+        return await self.booking_repo.get_driver_payout_ledger(driver_id)
+
+    async def get_admin_pending_payouts(self):
+        return await self.booking_repo.get_admin_pending_payouts()
+
+    async def process_admin_payout(self, booking_id: str, action: str, transfer_ref: str = None):
+        booking = await self.booking_repo.get_by_id(booking_id)
+        if not booking or booking.get("payout_status") != "pending":
+            raise HTTPException(status_code=400, detail="Payout already processed or invalid.")
+
+        total_fare = float(booking.get("total_price", 0))
+        advance = float(booking.get("amount_paid", 0))
+        commission = total_fare * 0.05
+        net_payout = advance - commission
+
+        if action == "credit":
+            await self.booking_repo.collection.update_one(
+                {"_id": self.booking_repo._to_id(booking_id)},
+                {"$set": {
+                    "payout_status": "credited", 
+                    "commission_deducted": commission,
+                    "amount_transferred": net_payout,
+                    "bank_transfer_ref": transfer_ref,
+                    "payout_processed_at": datetime.now(timezone.utc)
+                }}
+            )
+            return {"status": "success", "message": f"Marked as paid. {net_payout} PKR transferred."}
+            
+        elif action == "reject":
+            await self.booking_repo.collection.update_one(
+                {"_id": self.booking_repo._to_id(booking_id)},
+                {"$set": {
+                    "payout_status": "rejected", 
+                    "payout_processed_at": datetime.now(timezone.utc)
+                }}
+            )
+            return {"status": "success", "message": "Payout rejected."}
+
+        raise HTTPException(status_code=400, detail="Invalid action")
 class RatingService:
     def __init__(self, booking_repo, user_repo):
         self.booking_repo = booking_repo
@@ -362,3 +404,5 @@ class RatingService:
                 
                 # 4. Push the new average to the Driver's Profile
                 await self.user_repo.update_driver_average_rating(driver_id, new_avg, count)
+                
+    

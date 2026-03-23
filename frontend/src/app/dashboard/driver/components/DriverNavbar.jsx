@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { 
-  Bell, LogOut, ChevronDown, 
-  UserCircle, CreditCard, Banknote, 
-  Menu, X, User
+   LogOut, ChevronDown, 
+  CreditCard, Menu, X, User, 
+  TrendingUp, Wallet
 } from 'lucide-react';
 import { playPopSound } from '../../../utils/sounds';
 import { useRouter } from 'next/navigation';
 
-export default function DriverNavbar({ user, onOpenPayments, activeTab, totalEarnings = 0 }) {
+export default function DriverNavbar({ user, onOpenPayments, totalEarnings = 0 }) {
   const [showProfile, setShowProfile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -40,131 +40,141 @@ export default function DriverNavbar({ user, onOpenPayments, activeTab, totalEar
 
   return (
     <>
-      {/* Spacer to prevent layout shift */}
-      <div className="h-20 md:h-24 bg-white" />
+      {/* Dynamic Spacer */}
+      <div className={`${scrolled ? 'h-16 md:h-20' : 'h-20 md:h-24'} bg-white transition-all duration-500`} />
 
       <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${
-        scrolled ? 'py-2 px-4 md:px-8' : 'py-0 px-0'
+        scrolled ? 'p-2 md:p-4' : 'p-0'
       }`}>
-        {/* overflow-visible is CRITICAL to show the dropdown */}
-        <div className={`max-w-7xl mx-auto transition-all duration-500 flex items-center justify-between overflow-visible relative ${
+        <div className={`max-w-7xl mx-auto flex items-center justify-between transition-all duration-500 ${
           scrolled 
-          ? 'bg-white/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] border border-white/20 rounded-3xl h-16 md:h-20 px-6' 
-          : 'bg-slate-50/50 backdrop-blur-sm border-b border-slate-100 h-20 md:h-24 px-8'
+          ? 'bg-white/90 backdrop-blur-xl shadow-lg border border-slate-200/50 rounded-2xl h-16 md:h-20 px-5' 
+          : 'bg-white border-b border-slate-100 h-20 md:h-24 px-6 md:px-8'
         }`}>
           
-          {/* LEFT: Branding with Animation */}
+          {/* LEFT: Branding */}
           <div 
-            className="flex items-center cursor-pointer shrink-0" 
+            className="flex items-center cursor-pointer transition-transform active:scale-95" 
             onClick={() => router.push('/dashboard/driver')}
           >
-            <img 
-              src="/logo.png" 
-              alt="Logo" 
-              className="h-10 md:h-12 w-auto object-contain transition-transform duration-300 hover:scale-110 active:scale-95" 
-            />
+            <img src="/logo.png" alt="Logo" className="h-8 md:h-10 w-auto object-contain" />
           </div>
 
-          {/* RIGHT: Stats & Actions */}
-          <div className="flex items-center gap-2 md:gap-4">
+          {/* RIGHT: Actions */}
+          <div className="flex items-center gap-3">
             
-           
-
-            {/* Icons */}
-            <div className="hidden md:flex items-center gap-2">
+            {/* Desktop Quick Actions */}
+            <div className="hidden md:flex items-center gap-3 mr-2">
               <button 
                 onClick={() => { playPopSound(); onOpenPayments(); }}
-                className={`p-3 rounded-2xl transition-all border ${
-                  activeTab === 'payments' ? 'bg-slate-900 text-white shadow-lg' : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50 hover:text-emerald-500'
-                }`}
+                className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-all font-bold text-xs"
               >
-                <CreditCard size={20} />
-              </button>
-              <button className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-400 relative hover:bg-slate-50 hover:text-emerald-500 transition-all">
-                <Bell size={20} />
-                <span className="absolute top-3.5 right-3.5 w-1.5 h-1.5 bg-rose-500 rounded-full" />
+                <Wallet size={16} /> My Payments
               </button>
             </div>
 
-            {/* Profile Dropdown Section */}
-            <div className="relative" ref={dropdownRef}>
+            {/* Profile Dropdown (Desktop) */}
+            <div className="relative hidden md:block" ref={dropdownRef}>
               <button 
                 onClick={() => setShowProfile(!showProfile)}
-                className={`flex items-center gap-2 p-1 rounded-full transition-all border ${
-                  showProfile ? 'bg-slate-900 border-slate-900' : 'bg-white border-slate-200 hover:border-emerald-200'
+                className={`flex items-center gap-2 p-1 pr-3 rounded-full border transition-all ${
+                  showProfile ? 'bg-slate-900 border-slate-900 text-white' : 'bg-slate-50 border-slate-200 hover:border-emerald-500'
                 }`}
               >
-                <div className="w-8 h-8 rounded-full overflow-hidden">
-                  <img src={`https://ui-avatars.com/api/?name=${user?.username || 'Driver'}&background=10b981&color=fff&bold=true`} alt="Avatar" />
-                </div>
-                <ChevronDown size={14} className={`pr-1 transition-transform ${showProfile ? 'rotate-180 text-white' : 'text-slate-400'}`} />
+                <img 
+                  src={`https://ui-avatars.com/api/?name=${user?.username || 'Driver'}&background=10b981&color=fff&bold=true`} 
+                  className="w-8 h-8 rounded-full border border-white/20" 
+                  alt="Avatar" 
+                />
+                <span className="text-xs font-bold truncate max-w-[80px]">{user?.username || 'Captain'}</span>
+                <ChevronDown size={14} className={`transition-transform ${showProfile ? 'rotate-180' : ''}`} />
               </button>
 
               {showProfile && (
-                <div className="absolute right-0 top-full mt-3 w-64 bg-white border border-slate-200 rounded-[2rem] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] p-2 z-[999] animate-in fade-in zoom-in-95 slide-in-from-top-2 origin-top-right">
-                  <div className="p-4 bg-slate-50 rounded-[1.5rem] mb-1 text-center">
-                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Identity</p>
-                    <p className="text-sm font-black text-slate-900 truncate italic uppercase">{user?.username || 'Captain'}</p>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <DropdownItem onClick={() => {}} icon={<User size={16} />} label="My Profile" />
-                    
-                    
-                    <div className="h-px bg-slate-100 my-1 mx-3" />
-                    
-                    <button 
-                      onClick={handleLogout} 
-                      className="w-full flex items-center gap-3 p-4 text-rose-500 hover:bg-rose-50 rounded-[1.2rem] transition-all font-black uppercase text-[10px] tracking-widest"
-                    >
-                      <LogOut size={16} /> End Shift
-                    </button>
-                  </div>
+                <div className="absolute right-0 top-full mt-3 w-56 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 animate-in fade-in zoom-in-95 slide-in-from-top-2 origin-top-right">
+                   <button  className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 text-slate-600 rounded-xl transition-all group">
+                    <User size={16} className="text-emerald-500" />
+                    <span className="text-xs font-bold group-hover:text-slate-900">My Profile</span>
+                  </button>
+                  <div className="h-px bg-slate-100 my-1 mx-2" />
+                  <button onClick={handleLogout} className="w-full flex items-center gap-3 p-3 text-rose-500 hover:bg-rose-50 rounded-xl transition-all font-bold text-xs">
+                    <LogOut size={16} /> End Shift
+                  </button>
                 </div>
               )}
             </div>
 
-            {/* Mobile Toggle */}
+            {/* Mobile Menu Toggle */}
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
-              className="md:hidden p-2.5 bg-slate-100 text-slate-900 rounded-xl"
+              className="md:hidden p-2.5 bg-slate-900 text-white rounded-xl active:scale-90 transition-transform"
             >
-              <Menu size={22} />
+              <Menu size={20} />
             </button>
           </div>
         </div>
       </nav>
 
-      {/* MOBILE MENU (Responsive Drawer) */}
-      <div className={`fixed inset-0 z-[1000] transition-all duration-500 ${
-        isMobileMenuOpen ? 'visible' : 'invisible'
-      }`}>
-        <div className={`absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity ${
-          isMobileMenuOpen ? 'opacity-100' : 'opacity-0'
-        }`} onClick={() => setIsMobileMenuOpen(false)} />
+      {/* MOBILE DRAWER */}
+      <div className={`fixed inset-0 z-[2000] ${isMobileMenuOpen ? 'visible' : 'invisible'}`}>
+        <div 
+          className={`absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0'}`} 
+          onClick={() => setIsMobileMenuOpen(false)} 
+        />
         
-        <div className={`absolute right-0 top-0 bottom-0 w-[80%] max-w-sm bg-white transition-transform duration-500 transform ${
+        <div className={`absolute right-0 top-0 bottom-0 w-[85%] max-w-xs bg-white shadow-2xl transition-transform duration-500 flex flex-col ${
           isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}>
-          <div className="flex flex-col h-full p-6">
-            <div className="flex justify-between items-center mb-8">
-              <img src="/logo.png" alt="Logo" className="h-10 w-auto" />
-              <button onClick={() => setIsMobileMenuOpen(false)} className="p-3 bg-slate-100 rounded-full"><X size={24} /></button>
+          
+          {/* Drawer Header */}
+          <div className="p-6 flex items-center justify-between border-b border-slate-100">
+            <div className="flex items-center gap-3">
+               <img 
+                  src={`https://ui-avatars.com/api/?name=${user?.username || 'Driver'}&background=10b981&color=fff&bold=true`} 
+                  className="w-10 h-10 rounded-full" 
+                  alt="Avatar" 
+                />
+                <div>
+                  <p className="text-xs font-bold text-slate-900">{user?.username || 'Captain'}</p>
+                  <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Verified Driver</p>
+                </div>
+            </div>
+            <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-slate-100 rounded-lg text-slate-500"><X size={20} /></button>
+          </div>
+
+          {/* Drawer Body */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            
+            {/* Earnings Card */}
+            <div className="bg-slate-900 p-6 rounded-2xl text-white shadow-xl relative overflow-hidden">
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Current Earnings</p>
+               <h2 className="text-2xl font-black italic">Rs {totalEarnings?.toLocaleString()}</h2>
+               <TrendingUp className="absolute -right-2 -bottom-2 w-16 h-16 text-white/5" />
             </div>
 
-            <div className="bg-emerald-50 p-6 rounded-[2rem] border border-emerald-100 mb-6 flex flex-col items-center">
-              <p className="text-[10px] text-emerald-600 font-black uppercase mb-1">Earnings</p>
-              <h2 className="text-3xl font-black text-emerald-900 italic">{totalEarnings?.toLocaleString()} <span className="text-xs opacity-50">PKR</span></h2>
+            {/* Mobile Nav Links */}
+            <div className="space-y-2">
+              <MobileLink 
+                icon={<Wallet size={18} />} 
+                label="My Payments" 
+                onClick={() => { onOpenPayments(); setIsMobileMenuOpen(false); }} 
+              />
+              <MobileLink 
+                icon={<User size={18} />} 
+                label="My Profile" 
+                // onClick={() => { router.push('/profile'); setIsMobileMenuOpen(false); }} 
+              />
+             
             </div>
+          </div>
 
-            <nav className="space-y-3">
-              <MobileLink icon={<User size={20} />} label="My Profile" onClick={() => {}} />
-              <MobileLink icon={<UserCircle size={20} />} label="Passenger Portal" onClick={() => router.push('/dashboard/passenger')} />
-              <MobileLink icon={<CreditCard size={20} />} label="Payments" onClick={() => { onOpenPayments(); setIsMobileMenuOpen(false); }} />
-            </nav>
-
-            <button onClick={handleLogout} className="mt-auto w-full p-5 bg-rose-50 text-rose-600 rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-3">
-              <LogOut size={18} /> Sign Out
+          {/* Drawer Footer */}
+          <div className="p-6 border-t border-slate-100">
+            <button 
+              onClick={handleLogout} 
+              className="w-full p-4 bg-rose-50 text-rose-600 rounded-xl font-bold text-xs flex items-center justify-center gap-3 active:scale-95 transition-all"
+            >
+              <LogOut size={18} /> End Shift
             </button>
           </div>
         </div>
@@ -173,20 +183,14 @@ export default function DriverNavbar({ user, onOpenPayments, activeTab, totalEar
   );
 }
 
-function DropdownItem({ onClick, icon, label }) {
-  return (
-    <button onClick={onClick} className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 text-slate-600 rounded-[1.2rem] transition-all group">
-      <span className="text-emerald-500">{icon}</span>
-      <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-slate-900">{label}</span>
-    </button>
-  );
-}
-
 function MobileLink({ icon, label, onClick }) {
   return (
-    <button onClick={onClick} className="w-full p-5 bg-slate-50 rounded-2xl flex items-center gap-4 border border-slate-100">
-      <span className="text-emerald-500">{icon}</span>
-      <span className="text-xs font-black uppercase tracking-widest">{label}</span>
+    <button onClick={onClick} className="w-full p-4 hover:bg-slate-50 rounded-xl flex items-center justify-between text-slate-700 transition-all border border-transparent hover:border-slate-100">
+      <div className="flex items-center gap-4">
+        <span className="text-emerald-500">{icon}</span>
+        <span className="text-xs font-bold uppercase tracking-wider">{label}</span>
+      </div>
+      <ChevronDown size={14} className="-rotate-90 text-slate-300" />
     </button>
   );
 }

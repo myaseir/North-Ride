@@ -391,3 +391,100 @@ class BookingRepository:
         ratings = await cursor.to_list(length=None) 
         
         return ratings
+    
+    
+    # ==========================================
+    # 💰 PAYOUT & LEDGER METHODS (NEW)
+    # ==========================================
+
+    async def get_admin_pending_payouts(self):
+        """Fetches pending advances, driver payout details, and calculates 5% commission."""
+        pipeline = [
+            {"$match": {"status": "completed", "payout_status": "pending"}},
+            {
+                "$lookup": {
+                    "from": "users",
+                    "localField": "driver_id",
+                    "foreignField": "_id",
+                    "as": "driver_info"
+                }
+            },
+            {"$unwind": {"path": "$driver_info", "preserveNullAndEmptyArrays": True}},
+            {
+                "$project": {
+                    "id": {"$toString": "$_id"},
+                    "driver_id": {"$toString": "$driver_id"},
+                    "driver_name": "$driver_info.username",
+                    "driver_phone": "$driver_info.phone_number",
+                    
+                    # 🎯 FETCHES EXACTLY FROM YOUR PAYOUT OBJECT
+                    "payout_method": "$driver_info.driver_profile.payout.method",
+                    "payout_account": "$driver_info.driver_profile.payout.account",
+                    
+                    "trip_id": {"$toString": "$trip_id"},
+                    "passenger_name": 1,
+                    "advance_paid": "$amount_paid", 
+                    "total_price": 1,
+                    "completed_at": 1,
+                    "transactionId": 1
+                }
+            },
+            {"$sort": {"completed_at": 1}} # Oldest first so admin pays them first
+        ]
+        
+        results = await self.collection.aggregate(pipeline).to_list(length=100)
+        
+        # 🎯 CALCULATE THE 5% COMMISSION IN PYTHON
+        for r in results:
+            # 🛡️ THE FIX: Convert raw ObjectId to string so FastAPI doesn't crash
+            if "_id" in r:
+                r["_id"] = str(r["_id"])
+                
+            total_fare = float(r.get("total_price", 0))
+            advance = float(r.get("advance_paid", 0))
+            
+            # Commission is 5% of the TOTAL fare
+            commission = total_fare * 0.05 
+            
+            # What you actually transfer to their bank/Easypaisa
+            net_payout = advance - commission 
+            
+            r["commission_fee"] = commission
+            r["net_payout"] = net_payout
+            
+        return results
+
+    async def get_driver_payout_ledger(self, driver_id: str):
+        """Driver's transparent view of their bank payouts and commissions."""
+        cursor = self.collection.find({
+            "driver_id": self._to_id(driver_id),
+            "status": "completed",
+            "payout_status": {"$exists": True}
+        }).sort("completed_at", -1)
+        
+        results = await cursor.to_list(length=100)
+        
+        ledger = []
+        for b in results:
+            # 🛡️ THE FIX: Convert raw ObjectIds to strings so FastAPI doesn't crash
+            if "_id" in b:
+                b["_id"] = str(b["_id"])
+            if "trip_id" in b:
+                b["trip_id"] = str(b["trip_id"])
+            if "passenger_id" in b:
+                b["passenger_id"] = str(b["passenger_id"])
+            if "driver_id" in b:
+                b["driver_id"] = str(b["driver_id"])
+
+            total_fare = float(b.get("total_price", 0))
+            advance = float(b.get("amount_paid", 0))
+            commission = total_fare * 0.05
+            
+            item = self._format_booking(b)
+            item["advance_collected"] = advance
+            item["platform_commission"] = commission
+            item["net_bank_transfer"] = advance - commission
+            
+            ledger.append(item)
+            
+        return ledger

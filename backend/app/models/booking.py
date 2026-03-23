@@ -42,6 +42,13 @@ class BookingInDB(BaseModel):
     review_text: Optional[str] = None
     rated_at: Optional[datetime] = None
     
+    
+    payout_status: Optional[str] = None # "pending", "credited", "rejected"
+    commission_deducted: Optional[float] = None
+    amount_transferred: Optional[float] = None
+    bank_transfer_ref: Optional[str] = None
+    payout_processed_at: Optional[datetime] = None
+    
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     verified_at: Optional[datetime] = None
 

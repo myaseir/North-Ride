@@ -29,7 +29,10 @@ trip_service = TripService()
 class ManualSeatUpdate(BaseModel):
     seat_id: str
     action: str  # "hold", "booked", "free"
-    
+
+class PayoutAction(BaseModel):
+    action: str # "credit" or "reject"
+    transfer_ref: Optional[str] = None
     
   
     
@@ -392,5 +395,50 @@ async def submit_trip_rating(
     )
     return {"message": "Rating processed and driver stats updated"}
 
+# ==========================================
+# 💰 PAYOUT & LEDGER ENDPOINTS (NEW)
+# ==========================================
+
+@router.get("/driver/ledger")
+async def get_driver_ledger(
+    current_user = Depends(get_current_user),
+    trip_service: TripService = Depends(get_trip_service)
+):
+    """Driver views their pending, credited, and rejected advances."""
+    if "DRIVER" not in current_user.get("roles", []):
+        raise HTTPException(status_code=403, detail="Driver access required")
+        
+    user_id = current_user.get("id") or str(current_user.get("_id"))
+    return await trip_service.get_driver_ledger(user_id)
+
+
+@router.get("/admin/payouts/pending")
+async def admin_get_pending_payouts(
+    current_user = Depends(get_current_user), 
+    trip_service: TripService = Depends(get_trip_service)
+):
+    """Admin sees all pending advances to distribute."""
+    if "ADMIN" not in current_user.get("roles", []):
+        raise HTTPException(status_code=403, detail="Admin access required")
+        
+    return await trip_service.get_admin_pending_payouts()
+
+
+@router.post("/admin/payouts/{booking_id}/process")
+async def admin_process_payout(
+    booking_id: str, 
+    payload: PayoutAction,
+    current_user = Depends(get_current_user),
+    trip_service: TripService = Depends(get_trip_service)
+):
+    """Admin confirms the bank transfer was made or rejects the payout."""
+    if "ADMIN" not in current_user.get("roles", []):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    return await trip_service.process_admin_payout(
+        booking_id=booking_id, 
+        action=payload.action, 
+        transfer_ref=payload.transfer_ref
+    )
 
 
