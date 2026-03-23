@@ -7,15 +7,12 @@ class BookingCreate(BaseModel):
     seat_layout: List[str]
     transactionId: str
     senderName: str
-    account_number: str  # Required    # Required
-    amount_paid: float   # Required
+    account_number: str
+    amount_paid: float   # This is the 100% total (Base + Surcharge)
     apply_discount: bool = False
-    
 
 class BookingUpdate(BaseModel):
-    # status: pending, confirmed, cancelled, completed
     status: str 
-    # 🎯 NEW: Fields for Admin to provide custom driver contacts during verification
     manual_driver_contact_1: Optional[str] = None
     manual_driver_contact_2: Optional[str] = None
     admin_notes: Optional[str] = None
@@ -24,27 +21,36 @@ class BookingInDB(BaseModel):
     id: str = Field(alias="_id")
     trip_id: str
     passenger_id: str
-    # 🎯 NEW: Store passenger name/phone snapshot for the Driver's Manifest
-    # This prevents issues if a passenger changes their profile later
     passenger_name: Optional[str] = None
     passenger_phone: Optional[str] = None
     
-    
     seat_layout: List[str] 
-    total_price: float
+    
+    # --- 🎯 NEW FINANCIAL FIELDS ---
+    total_price: float         # The full cost (e.g., 7500)
+    amount_paid: float = 0.0   # The 20% advance actually paid (e.g., 1500)
+    surcharge_amount: float = 0.0 # The +2500 if Front Seat was picked
+    has_premium_seat: bool = False # Easy flag for UI/Admin
+    
     status: str = "pending" 
     
-    # 🎯 NEW: Shadow Routing fields stored in DB
     manual_driver_contact_1: Optional[str] = None
     manual_driver_contact_2: Optional[str] = None
     
-    rating_popup_shown: bool = False  # The "One-Time" gatekeeper
-    rating: Optional[int] = None      # 1-5 Stars
-    review_text: Optional[str] = None # Optional user comment
+    rating_popup_shown: bool = False
+    rating: Optional[int] = None
+    review_text: Optional[str] = None
     rated_at: Optional[datetime] = None
     
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     verified_at: Optional[datetime] = None
+
+    # --- 🎯 NEW COMPUTED FIELD FOR THE DRIVER ---
+    @computed_field 
+    @property
+    def remaining_balance(self) -> float:
+        """The 'Collect Cash' amount for the Driver."""
+        return self.total_price - self.amount_paid
 
     @computed_field 
     @property

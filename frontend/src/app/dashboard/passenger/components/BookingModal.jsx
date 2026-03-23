@@ -25,6 +25,7 @@ export default function BookingModal({
     seats: 0,
     seat_layout: [], // Crucial for Driver visual: e.g., ['RL', 'RC']
     useDiscount: false,
+    finalPrice: 0,   // 🎯 ADDED: We must store the exact price coming from SeatSelectionStep
     senderName: '',
     accountNo: '',
     transactionId: ''
@@ -35,17 +36,19 @@ export default function BookingModal({
     if (!isOpen) {
       setStep(1);
       setIsSubmitting(false);
+      setBookingData({
+        seats: 0,
+        seat_layout: [],
+        useDiscount: false,
+        finalPrice: 0,
+        senderName: '',
+        accountNo: '',
+        transactionId: ''
+      });
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
-
-  // --- CALCULATIONS ---
-  const basePricePerSeat = trip?.fare || trip?.price || 0;
-  const totalBasePrice = basePricePerSeat * bookingData.seats;
-  const finalPrice = bookingData.useDiscount 
-    ? Math.floor(totalBasePrice * 0.9) 
-    : totalBasePrice;
 
   // --- HANDLERS ---
 
@@ -57,9 +60,9 @@ export default function BookingModal({
     setBookingData(prev => ({ 
       ...prev, 
       seats: seatData.seats,
-      // Use the key coming from your SeatSelectionStep component
-      seat_layout: seatData.seat_layout || seatData.seat_layout, 
-      useDiscount: seatData.useDiscount 
+      seat_layout: seatData.seat_layout || seatData.seatLayout, // Ensure fallback 
+      useDiscount: seatData.useDiscount,
+      finalPrice: seatData.finalPrice // 🎯 THE FIX: Catch the price that includes the 2500 surcharge!
     }));
     setStep(2);
   };
@@ -79,12 +82,8 @@ const handleFinalSubmit = async (paymentData) => {
             seat_layout: bookingData.seat_layout, 
             transactionId: String(paymentData.transactionId),
             senderName: String(paymentData.senderName),
-            
-            // 🎯 THE FIX: Use paymentData.amount (from the form) 
-            // and map it to amount_paid (for the backend)
             account_number: String(paymentData.account_number), 
             amount_paid: parseFloat(paymentData.amount_paid || paymentData.amount), 
-            
             apply_discount: Boolean(bookingData.useDiscount)
         };
 
@@ -100,7 +99,6 @@ const handleFinalSubmit = async (paymentData) => {
         const result = await response.json();
 
         if (!response.ok) {
-            // 🎯 IMPROVED LOGGING: This will stop showing {} and show the actual error
             console.error("Validation Error:", JSON.stringify(result, null, 2));
             
             // Extract the specific field error if it's a 422
@@ -120,6 +118,7 @@ const handleFinalSubmit = async (paymentData) => {
         setIsSubmitting(false);
     }
 };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
@@ -182,7 +181,7 @@ const handleFinalSubmit = async (paymentData) => {
                 </div>
               )}
               <PaymentFormStep 
-                finalPrice={finalPrice} 
+                finalPrice={bookingData.finalPrice} // 🎯 THE FIX: Pass down the stored price, not a re-calculated one!
                 initialData={bookingData}
                 onBack={() => setStep(1)}
                 onSubmit={handleFinalSubmit} 

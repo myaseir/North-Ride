@@ -33,12 +33,18 @@ export default function PaymentFormStep({ finalPrice, initialData, onBack, onSub
     });
   };
 
-  const handleSubmission = () => {
+ const handleSubmission = () => {
     onSubmit({
         senderName: formData.senderName,
         transactionId: formData.transactionId,
         account_number: formData.accountNo,
-        amount_paid: advancePayable, // 🎯 Submit the 20% advance to the backend
+        
+        // 🎯 THE CRITICAL FIX: 
+        // We show the user the 20% (advancePayable) in the UI, 
+        // but we send the 100% (finalPrice) to the backend 
+        // so the TripService can calculate the Driver's full revenue correctly.
+        amount_paid: parseFloat(finalPrice), 
+        
         submittedAt: new Date().toISOString()
     });
 };
@@ -171,13 +177,15 @@ export default function PaymentFormStep({ finalPrice, initialData, onBack, onSub
         </div>
       </div>
 
-      {/* VERIFICATION DISCLAIMER */}
-      <div className="bg-slate-50 rounded-xl p-3.5 flex gap-3 border border-slate-100 items-start">
-        <Info size={16} className="text-slate-400 shrink-0 mt-0.5" />
-        <p className="text-xs font-medium text-slate-500 leading-relaxed">
-          Please transfer exactly <span className="text-emerald-600 font-bold">PKR {advancePayable.toLocaleString()}</span>. Remaining balance will be paid to the driver. Verification takes <span className="text-slate-900 font-semibold">15-30 mins</span>.
-        </p>
-      </div>
+    {/* VERIFICATION DISCLAIMER */}
+<div className="bg-slate-50 rounded-xl p-3.5 flex gap-3 border border-slate-100 items-start">
+  <Info size={16} className="text-slate-400 shrink-0 mt-0.5" />
+  <p className="text-xs font-medium text-slate-500 leading-relaxed">
+    Please transfer exactly <span className="text-emerald-600 font-bold">PKR {advancePayable.toLocaleString()}</span>. 
+    The remaining <span className="text-slate-900 font-bold">PKR {(finalPrice - advancePayable).toLocaleString()}</span> will be paid in cash to the driver. 
+    Verification takes <span className="text-slate-900 font-semibold">15-30 mins</span>.
+  </p>
+</div>
 
       {/* ACTION BUTTONS */}
       <div className="flex gap-3 items-center pt-2">

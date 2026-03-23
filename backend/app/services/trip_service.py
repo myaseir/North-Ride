@@ -54,13 +54,14 @@ class TripService:
         self, 
         user_id: str, 
         passenger_name: str,
+        passenger_phone: str,
         sender_name: str, 
         trip_id: str, 
         transaction_id: str, 
         seat_layout: list[str],
-        account_number: str,  # 🎯 NEW: Accept from route
-        amount_paid: float     # 🎯 NEW: Accept from route
-    ):
+        account_number: str,
+        amount_paid: float # This is the 100% Total from the frontend
+        ):
         """
         Locks seats in Redis and creates a Pending Booking + Links Passenger.
         """
@@ -71,14 +72,12 @@ class TripService:
         if trip.get("status") != "scheduled":
             raise HTTPException(status_code=400, detail="Trip no longer accepting bookings.")
 
-    # 🛡️ REDIS SAFETY: Only attempt lock if Redis is actually connected
-    # This prevents the [getaddrinfo failed] error from crashing the booking
+    # 🛡️ REDIS SAFETY: Attempt seat locking
         lock_acquired = True
         try:
             lock_acquired = await self.redis.acquire_seat_locks(trip_id, seat_layout)
         except Exception as redis_err:
             logger.warning(f"Redis unavailable, skipping lock: {redis_err}")
-        # We continue so the user can still book even if Redis is down
 
         if not lock_acquired:
             raise HTTPException(
@@ -87,23 +86,26 @@ class TripService:
             )
 
         try:
-        # 🎯 Pass the new fields to your repository
+        # 🎯 Pass the 100% total to the repository
+        # The Repo logic handles the internal 20% vs 80% split
             booking_id = await self.booking_repo.create_pending(
                 user_id=user_id,
                 passenger_name=passenger_name,
+                passenger_phone=passenger_phone,
                 sender_name=sender_name,
                 trip_id=trip_id,
-                amount=amount_paid,      # Use the verified amount from frontend
+                amount=amount_paid,      
                 trx_id=transaction_id,
                 seat_layout=seat_layout,
-                account_number=account_number # 🎯 Ensure repo handles this
+                account_number=account_number 
             )
 
-            if booking_id == "ALREADY_BOOKED":
+        # 🎯 MATCH: Repository returns "SEATS_TAKEN" on conflict
+            if booking_id == "SEATS_TAKEN":
                 try:
                     await self.redis.release_seat_locks(trip_id, seat_layout)
                 except: pass
-                raise HTTPException(status_code=400, detail="User already has a booking.")
+                raise HTTPException(status_code=400, detail="One or more selected seats are already booked.")
 
         # Link the passenger to this trip for /api/trips/active
             await self.user_repo.set_active_trip(user_id, trip_id)
@@ -111,7 +113,7 @@ class TripService:
             return booking_id
 
         except Exception as e:
-        # Clean up Redis on failure
+        # Clean up Redis on any failure
             try:
                 await self.redis.release_seat_locks(trip_id, seat_layout)
             except: pass
@@ -160,8 +162,7 @@ class TripService:
         if str(trip["driver_id"]) != str(driver_id):
             raise HTTPException(status_code=403, detail="Unauthorized.")
 
-    # 🎯 FIX 1: Move Manifest fetch to the TOP.
-    # We need the list of confirmed passengers BEFORE we change their status.
+    # Fetch Manifest BEFORE changing status to ensure we get confirmed passengers
         manifest = await self.booking_repo.get_trip_manifest(trip_id)
 
     # 1. Update Trip Status
@@ -178,22 +179,24 @@ class TripService:
                     "status": "completed",
                     "completed_at": datetime.now(timezone.utc),
                     "rating_popup_shown": False,
-                    "driver_id": self.booking_repo._to_id(driver_id) # 🎯 Added for rating calculation
+                    "driver_id": self.booking_repo._to_id(driver_id) 
                 }
             }
         )
 
-    # 3. Calculate revenue (Manifest is already fetched at the top)
-        total_revenue = sum(b.get("amount", 0) for b in manifest if b["status"] in ["confirmed", "completed"])
+    # 3. 🎯 REVENUE CALCULATION: Use total_price (Base + Surcharge)
+        total_revenue = sum(
+            float(b.get("total_price", 0)) 
+            for b in manifest 
+            if b.get("status") in ["confirmed", "completed"]
+        )
 
-    # 4. 🎯 CLEANUP: Unlink all passengers
-    # This loop will now work because 'manifest' contains the passengers!
+    # 4. CLEANUP: Unlink all passengers and the driver
         for booking in manifest:
             passenger_id = str(booking.get("passenger_id"))
             if passenger_id and passenger_id != "None":
                 await self.user_repo.set_active_trip(passenger_id, None)
 
-    # 5. CLEANUP: Unlink the driver
         await self.user_repo.set_active_trip(driver_id, None)
 
         return {"status": "success", "earnings": total_revenue}
@@ -286,29 +289,35 @@ class TripService:
         return trips
     async def get_passenger_ride_history(self, passenger_id: str):
         """
-        Fetches and formats the history for a passenger.
-        🎯 Logic: Get bookings -> Enrich with Trip details.
+        Fetches and formats history with clear financial breakdown.
         """
-        # 1. Get raw bookings from repo
+    # 1. Get raw bookings from repo (already enriched with trip data via lookup)
         bookings = await self.booking_repo.get_passenger_history(passenger_id)
-        
+    
         enriched_history = []
         for b in bookings:
-            # 2. We need to make sure the data is 'UI-Ready'
-            # If your booking doesn't have the route names, fetch them from the trip
+        # 🎯 FINANCIAL BREAKDOWN
+        # total_price = Base + Surcharge
+        # amount_paid = 20% Advance
+            total = float(b.get("total_price", 0))
+            advance = float(b.get("amount_paid", 0))
+        
             ride_entry = {
                 "id": str(b["_id"]),
                 "origin": b.get("origin", "Unknown"),
                 "destination": b.get("destination", "Unknown"),
-                "total_price": b.get("amount", 0),
+                "total_price": total,
+                "advance_paid": advance,
+                "remaining_balance": total - advance, # 💰 Cash to be paid to driver
                 "status": b.get("status", "completed"),
                 "created_at": b.get("created_at"),
-                "rating": b.get("rating"), # 🎯 Added for the History UI
+                "rating": b.get("rating"), 
                 "review_text": b.get("review_text"),
-                "final_driver_name": b.get("final_driver_name", "Driver")
+                "final_driver_name": b.get("final_driver_name", "Driver"),
+                "has_premium_seat": "FL" in b.get("seat_layout", [])
             }
             enriched_history.append(ride_entry)
-            
+        
         return enriched_history
 class RatingService:
     def __init__(self, booking_repo, user_repo):
@@ -317,9 +326,14 @@ class RatingService:
         
     async def get_popup_data(self, user_id: str):
         """Checks if a user is due for a one-time rating popup."""
+        
+        # 🎯 This single call now finds the booking AND flips the flag automatically!
         booking = await self.booking_repo.get_unrated_booking_for_popup(user_id)
+        
         if not booking:
             return None
+        
+        # (We removed the 'update_prompt_status' call from here because the repo already did it)
         
         return {
             "booking_id": booking["id"],

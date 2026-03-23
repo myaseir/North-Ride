@@ -3,6 +3,7 @@ from app.db.mongodb import db
 from bson import ObjectId
 from datetime import datetime, timezone
 from typing import Optional, List, Any
+from pymongo import ReturnDocument #
 import logging
 
 logger = logging.getLogger("uvicorn.error")
@@ -42,42 +43,59 @@ class BookingRepository:
         self, 
         user_id: str, 
         passenger_name: str, 
+        passenger_phone:str,
         trip_id: str, 
-        amount: float, 
+        amount: float, # This remains the total from the frontend
         trx_id: str, 
         seat_layout: list,
-        account_number: str ,
+        account_number: str,
         sender_name: str = None
         ):
-        """
-        Creates a new booking document. Allows multiple bookings per user 
-        as long as the SEATS are different.
-        """
     
-    # 🎯 THE CHANGE: Check if these SPECIFIC SEATS are already booked by ANYONE
-    # instead of checking if the USER has a booking.
+    # 1. 🎯 Define the Surcharge Constant
+        FRONT_SEAT_SURCHARGE = 2500
+    
+    # 2. Check for Seat Conflicts
         seat_conflict = await self.collection.find_one({
             "trip_id": self._to_id(trip_id),
-            "seat_layout": {"$in": seat_layout}, # Check if any requested seat overlaps
+            "seat_layout": {"$in": seat_layout},
             "status": {"$in": ["pending", "confirmed"]}
         })
-    
+
         if seat_conflict:
             return "SEATS_TAKEN"
 
-    # Prepare the document
+    # 3. 🎯 Calculate Surcharge and Remaining Balance
+    # Check if 'FL' (Front Left) is in the selected seats
+        has_front_seat = "FL" in seat_layout
+        surcharge_total = FRONT_SEAT_SURCHARGE if has_front_seat else 0
+    
+    # amount_paid is the 20% advance sent by frontend (passed as 'amount')
+    # total_price is the full trip cost (e.g., 7500)
+        total_price = float(amount) 
+    # Usually, 'amount' from your current frontend payload is the 20% advance.
+    # We calculate the remaining balance for the Driver's Manifest.
+        advance_paid = total_price * 0.20 # If 'amount' was 100%, we calculate 20%
+    
+    # Prepare the document with detailed breakdown
         booking_doc = {
             "passenger_id": self._to_id(user_id),
             "trip_id": self._to_id(trip_id),
             "passenger_name": passenger_name,
+            "passenger_phone": passenger_phone,
             "sender_name": sender_name,
             "seat_layout": seat_layout,
-            "total_price": float(amount),
+            "base_fare": total_price - surcharge_total, # Internal record
+            "surcharge_amount": surcharge_total,        # 🎯 TRACK THIS SEPARATELY
+            "total_price": total_price,
+            "amount_paid": advance_paid,                 # The 20% deposit
+            "remaining_balance": total_price - advance_paid, # 🎯 FOR THE DRIVER
             "transactionId": trx_id,
             "account_number": account_number,
             "status": "pending",
+            "has_premium_seat": has_front_seat,          # Quick flag for Admin/Driver
             "created_at": datetime.now(timezone.utc)
-        }
+            }
 
         result = await self.collection.insert_one(booking_doc)
         return str(result.inserted_id)
@@ -260,26 +278,26 @@ class BookingRepository:
     async def get_unrated_booking_for_popup(self, user_id: str) -> Optional[dict]:
         """
         Finds a completed booking that hasn't triggered a popup yet.
-        🎯 The 'One-Time' Logic: We flip the flag to True immediately.
+        🎯 Atomic 'Read & Burn': Finds and flips the flag in one unbreakable step.
         """
-        # 1. Search for a candidate
-        booking = await self.collection.find_one({
-            "passenger_id": self._to_id(user_id),
-            "status": "completed",
-            "rating_popup_shown": False
-        })
+        booking = await self.collection.find_one_and_update(
+            {
+                "passenger_id": self._to_id(user_id),
+                "status": "completed",
+            # Using $ne (not equal) is safer. It catches False AND older bookings where the field doesn't exist yet!
+                "rating_popup_shown": {"$ne": True},
+            # Extra safety: Make sure they haven't already rated it via another screen
+                "is_rated": {"$ne": True} 
+            },
+            {"$set": {"rating_popup_shown": True}},
+        # This tells Mongo to give us the document AFTER it flipped the switch
+            return_document=ReturnDocument.AFTER 
+        )
 
         if not booking:
             return None
 
-        # 2. FLIP THE FLAG IMMEDIATELY 
-        # This prevents the popup from showing again on the next refresh
-        await self.collection.update_one(
-            {"_id": booking["_id"]},
-            {"$set": {"rating_popup_shown": True}}
-        )
-
-        # 3. Clean up IDs for frontend
+    # Clean up IDs for frontend
         booking["id"] = str(booking["_id"])
         return booking
 
@@ -290,7 +308,8 @@ class BookingRepository:
             {"$set": {
                 "rating": rating,
                 "review_text": review,
-                "rated_at": datetime.now(timezone.utc)
+                "rated_at": datetime.now(timezone.utc),
+                "is_rated": True  # 🎯 ADD THIS LINE!
             }}
         )
     

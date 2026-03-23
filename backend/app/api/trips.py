@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status,Response
+from fastapi import APIRouter, Depends,BackgroundTasks, HTTPException, status,Response
 from typing import List, Optional
 from datetime import datetime, timezone,timedelta
 from bson import ObjectId
@@ -98,6 +98,7 @@ async def get_active_trip(current_user: dict = Depends(get_current_user)):
         bid = b.pop("_id", b.get("id"))
         b["id"] = str(bid)
         b["is_verified"] = (b.get("status") == "confirmed")
+        b["passenger_phone"] = b.get("passenger_phone")
         cleaned_passengers.append(b)
 
     trip["passengers"] = cleaned_passengers
@@ -159,57 +160,81 @@ async def search_trips(
 @router.get("/manifest/{trip_id}")
 async def get_trip_manifest(trip_id: str, current_user: Optional[dict] = Depends(lambda: None)):
     """
-    Returns the seat chart. 
-    Publicly accessible so passengers can see available seats.
+    Returns the seat chart and payment status.
+    Now includes 'remaining_balance' for Driver/Admin transparency.
     """
-    # 1. Fetch trip from DB
     trip = await trip_service.trip_repo.get_by_id(trip_id)
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
 
-    # 2. Fetch all bookings for this trip
     bookings = await trip_service.booking_repo.get_trip_manifest(trip_id)
     
-    # 3. Clean the data for public view
-    # We only send seat_layout and status. This protects passenger privacy.
     cleaned_bookings = []
     for b in bookings:
+        # 🎯 THE PROFESSIONAL UPDATE:
+        # We calculate the balance here so the Frontend doesn't have to do math.
+        total = float(b.get("total_price", 0))
+        paid = float(b.get("amount_paid", 0))
+        balance = total - paid
+
         cleaned_bookings.append({
-            "id": b.get("id"), # Useful for unique keys in React
+            "id": str(b.get("_id")),
             "seat_layout": b.get("seat_layout", []),
             "status": b.get("status"),
-            "passenger_name": b.get("passenger_name"), # 🎯 REQUIRED for your frontend check
-            "is_manual": b.get("is_manual", False)    # 🎯 REQUIRED to unlock the buttons
+            "passenger_name": b.get("passenger_name"),
+            "passenger_phone": b.get("passenger_phone"),
+            "is_manual": b.get("is_manual", False),
+            
+            # 🎯 NEW FINANCIAL FIELDS FOR THE DRIVER/ADMIN
+            "total_trip_cost": total,
+            "advance_paid": paid,
+            "remaining_balance": balance, # 💰 This is the "Collect Cash" amount
+            "has_premium_seat": "FL" in b.get("seat_layout", [])
         })
 
     return {
         "trip_id": str(trip["_id"]),
         "origin": trip.get("origin"),
         "destination": trip.get("destination"),
+        "base_fare": trip.get("fare") or trip.get("price"),
         "bookings": cleaned_bookings 
     }
 
 @router.post("/book")
 async def book_trip(payload: BookingCreate, current_user: dict = Depends(get_current_user)):
     try:
-        # 🎯 THE AUTOMATIC FIX: 
-        # Use current_user.get("full_name") so the user doesn't have to type it.
+        # 🎯 Derived from the Account (Automatic ID verification)
         passenger_name = current_user.get("full_name") or current_user.get("username")
+        passenger_phone = current_user.get("phone") or current_user.get("phone_number")
+
+        # 🎯 LOGGING: It's good practice to log the incoming amount 
+        # so you can debug if the +2500 was included by the frontend
+        logger.info(f"Processing booking for {passenger_name}. Amount Received: {payload.amount_paid}")
 
         booking_id = await trip_service.book_seat(
             user_id=str(current_user["_id"]),
-            passenger_name=passenger_name, # Derived from the Account (DI)
-            sender_name=payload.senderName, # Derived from Payment Form
+            passenger_name=passenger_name, 
+            passenger_phone=passenger_phone,
+            sender_name=payload.senderName, 
             trip_id=payload.trip_id,
             transaction_id=payload.transactionId,
             seat_layout=payload.seat_layout,
             account_number=payload.account_number, 
+            # 🎯 This payload.amount_paid should be the 100% total 
+            # (Base + 2500 if applicable) calculated by your frontend.
             amount_paid=payload.amount_paid        
         )
+
+        if booking_id == "SEATS_TAKEN":
+            raise HTTPException(status_code=400, detail="One or more selected seats are already booked.")
+
         return {"status": "success", "booking_id": booking_id}
+
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Booking Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.get("/history")
 async def get_unified_history(
@@ -343,7 +368,9 @@ async def check_pending_rating(
     # 🎯 FIX: Use ['id'] instead of .id
     user_id = current_user.get("id") or str(current_user.get("_id"))
     
+    # Fetch the data (This atomically flips the switch in the DB now!)
     popup_data = await rating_service.get_popup_data(user_id)
+    
     if not popup_data:
         return Response(status_code=204)
     

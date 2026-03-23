@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useMemo } from 'react';
-import { Tag, ArrowRight, ShieldCheck, Info } from 'lucide-react';
+import { Tag, ArrowRight, ShieldCheck, Info, Star  } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function SeatSelectionStep({ trip, availableDiscounts, initialData, onNext }) {
@@ -74,9 +74,20 @@ const seatStatuses = useMemo(() => {
   };
 
   // --- PRICING MATH ---
-const currentTotalBasePrice = basePricePerSeat * selectedSeats.length;
+// --- PRICING MATH ---
+  const FRONT_SEAT_SURCHARGE = 2500; // 🎯 Define the flat fee
+  
+  const currentTotalBasePrice = useMemo(() => {
+    return selectedSeats.reduce((total, seatId) => {
+      // If Front Left is selected, add base + 2500, else just base
+      const seatPrice = (seatId === 'FL') 
+        ? (basePricePerSeat + FRONT_SEAT_SURCHARGE) 
+        : basePricePerSeat;
+      return total + seatPrice;
+    }, 0);
+  }, [selectedSeats, basePricePerSeat]);
+
   const finalPrice = useDiscount ? Math.floor(currentTotalBasePrice * 0.9) : currentTotalBasePrice;
-  // 🎯 NEW: Calculate 20% Advance
   const advancePayment = Math.ceil(finalPrice * 0.20);
   // --- HANDLERS ---
   const toggleSeat = (seatId) => {
@@ -193,15 +204,23 @@ const currentTotalBasePrice = basePricePerSeat * selectedSeats.length;
             </div>
 
             {/* Passenger Seats */}
-            {seatConfig.map((seat) => (
-              <button
-                key={seat.id}
-                onClick={() => toggleSeat(seat.id)}
-                className={`absolute w-[28px] h-[36px] rounded-[6px_6px_4px_4px] flex flex-col justify-center items-center z-[5] transition-all duration-300 ${seat.top} ${seat.left} ${seat.right} ${getSeatStyle(getSeatStatus(seat.id))}`}
-              >
-                <span className="text-[8px] font-black uppercase tracking-widest">{seat.label}</span>
-              </button>
-            ))}
+           {/* Passenger Seats */}
+{seatConfig.map((seat) => (
+  <button
+    key={seat.id}
+    onClick={() => toggleSeat(seat.id)}
+    className={`absolute w-[28px] h-[36px] rounded-[6px_6px_4px_4px] flex flex-col justify-center items-center z-[5] transition-all duration-300 ${seat.top} ${seat.left} ${seat.right} ${getSeatStyle(getSeatStatus(seat.id))}`}
+  >
+    <span className="text-[8px] font-black uppercase tracking-widest">{seat.label}</span>
+    
+    {/* 🎯 NEW: Premium Badge for Front Seat */}
+    {seat.id === 'FL' && (
+      <div className="absolute -top-1 -right-1 bg-amber-400 rounded-full p-0.5 shadow-sm">
+        <Star size={6} className="text-white fill-white" />
+      </div>
+    )}
+  </button>
+))}
           </div>
 
           <div className="absolute top-[115px] left-[-14px] w-[18px] h-[26px] rounded-[12px_4px_4px_14px] z-[5] bg-[linear-gradient(to_right,#2a2d34,#8f9aa9)] shadow-[-4px_6px_8px_rgba(0,0,0,0.5)]"></div>
@@ -239,12 +258,22 @@ const currentTotalBasePrice = basePricePerSeat * selectedSeats.length;
       )}
 
       {/* --- PRICING SUMMARY --- */}
+      {/* --- PRICING SUMMARY --- */}
       <div className="flex justify-between items-end px-1 pt-2">
         
         {/* Left Column: Context */}
         <div className="flex flex-col gap-1">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Advance Amount</span>
-          <span className="text-[11px] font-bold text-emerald-600">20% TO RESERVE</span>
+          
+          {/* 🎯 NEW: Premium Surcharge Indicator */}
+          {selectedSeats.includes('FL') && (
+            <div className="flex items-center gap-1 text-[9px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100 animate-in fade-in slide-in-from-left-2 uppercase tracking-tighter">
+              <Star size={8} className="fill-amber-500" /> Front Seat Premium Included
+            </div>
+          )}
+
+          <span className="text-[11px] font-bold text-emerald-600 uppercase">20% TO RESERVE</span>
+          
           {selectedSeats.length === 0 && (
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-500 uppercase mt-0.5">
               <Info size={12} /> Tap a seat to select
@@ -258,22 +287,21 @@ const currentTotalBasePrice = basePricePerSeat * selectedSeats.length;
           {/* Full Price Reference */}
           <div className="flex flex-col items-end mb-2">
             {useDiscount && (
-              <span className="text-[11px] text-slate-400 line-through mb-0.5">
+              <span className="text-[11px] text-slate-400 line-through mb-0.5 font-bold">
                 PKR {currentTotalBasePrice.toLocaleString()}
               </span>
             )}
-            <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
+            <span className="text-xs font-black text-slate-600 uppercase tracking-tight">
               Total: PKR {finalPrice.toLocaleString()}
             </span>
           </div>
 
           {/* The 20% Payable Amount */}
           <div className="flex flex-col items-end mt-1">
-            <span className="text-[10px] font-bold text-emerald-700 uppercase bg-emerald-100/80 px-2 py-0.5 rounded mb-1">
+            <span className="text-[10px] font-black text-emerald-700 uppercase bg-emerald-100/80 px-2 py-0.5 rounded-lg mb-1 tracking-widest">
               Payable Now
             </span>
-            {/* 🎯 Reduced from text-3xl to a clean, professional text-xl */}
-            <span className={`text-xl font-black tracking-tight transition-colors ${selectedSeats.length > 0 ? 'text-slate-900' : 'text-slate-300'}`}>
+            <span className={`text-2xl font-black tracking-tighter transition-colors italic ${selectedSeats.length > 0 ? 'text-slate-900' : 'text-slate-300'}`}>
               PKR {advancePayment.toLocaleString()}
             </span>
           </div>
@@ -284,9 +312,10 @@ const currentTotalBasePrice = basePricePerSeat * selectedSeats.length;
         type="button"
         onClick={handleContinue}
         disabled={selectedSeats.length === 0}
-        className="w-full py-3.5 bg-slate-900 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-md hover:bg-emerald-600 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-900 flex items-center justify-center gap-2"
+        className="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-600 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
       >
-        Proceed to Payment <ArrowRight size={16} />
+        Proceed to Payment 
+        <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
       </button>
     </div>
   );

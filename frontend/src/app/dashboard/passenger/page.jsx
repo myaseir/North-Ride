@@ -34,9 +34,10 @@ const [ratingData, setRatingData] = useState(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
- const fetchDashboardData = useCallback(async (token) => {
+const fetchDashboardData = useCallback(async (token) => {
     try {
-      const [ridesRes, referralRes, activeRes] = await Promise.all([
+      // 🎯 ADDED: The check-rating endpoint is now fetched alongside the other data
+      const [ridesRes, referralRes, activeRes, ratingRes] = await Promise.all([
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/trips/history`, { 
           headers: { 'Authorization': `Bearer ${token}` } 
         }),
@@ -44,6 +45,9 @@ const [ratingData, setRatingData] = useState(null);
           headers: { 'Authorization': `Bearer ${token}` } 
         }),
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/trips/active`, { 
+          headers: { 'Authorization': `Bearer ${token}` } 
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/trips/active/check-rating`, { 
           headers: { 'Authorization': `Bearer ${token}` } 
         })
       ]);
@@ -73,6 +77,16 @@ const [ratingData, setRatingData] = useState(null);
       } else {
         setActiveTripDetails(null);
       }
+
+      // 🎯 ADDED: Handle the Rating Popup response
+      // Because of your backend "Read & Burn", this will only be 200 ONE time!
+      // After that, it returns 204 No Content and safely ignores this block.
+      if (ratingRes.status === 200) {
+        const data = await ratingRes.json();
+        setRatingData(data);
+        setShowRating(true);
+      }
+
     } catch (err) {
       console.warn("Sync incomplete:", err);
     }
@@ -80,28 +94,7 @@ const [ratingData, setRatingData] = useState(null);
 
 
 
-  useEffect(() => {
-  const checkPendingRating = async () => {
-    const token = localStorage.getItem("token");
-    if (!token || !isAuthorized) return;
-
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/trips/active/check-rating`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (res.status === 200) {
-        const data = await res.json();
-        setRatingData(data);
-        setShowRating(true);
-      }
-    } catch (err) {
-      console.warn("Rating check failed:", err);
-    }
-  };
-
-  checkPendingRating();
-}, [isAuthorized]);
+ 
 const handleRatingSubmit = useCallback(async (payload) => {
   const token = localStorage.getItem("token");
   try {
@@ -235,7 +228,7 @@ const handleRatingSubmit = useCallback(async (payload) => {
       </div>
     );
   }
-
+console.log("🕵️‍♂️ MY FULL USER OBJECT:", user);
   return (
     <div className="min-h-screen bg-[#F8FAFB] pb-12 selection:bg-emerald-100">
       <PassengerNavbar onOpenHistory={() => setSidebarOpen(true)} activeTab="search" />
@@ -246,11 +239,14 @@ const handleRatingSubmit = useCallback(async (payload) => {
         {activeTripDetails ? (
           <main className="px-4 mt-6 space-y-6">
             <section className="bg-white p-6 rounded-[35px] shadow-xl border border-emerald-100/50">
-               <ActiveTripStatus 
-                trip={activeTripDetails} 
-                availableDiscounts={referralStats.availableDiscounts}
-                onAddSeats={(bookingData) => handleBookRide(activeTripDetails.id, bookingData)}
-              />
+              <ActiveTripStatus 
+  trip={activeTripDetails} 
+  currentUserEmail={user?.email} 
+  currentUserId={user?.id || user?._id} 
+  availableDiscounts={referralStats.availableDiscounts}
+  onRefresh={() => fetchDashboardData(user?.token)} 
+  onAddSeats={(bookingData) => handleBookRide(activeTripDetails.id || activeTripDetails._id, bookingData)}
+/>
             </section>
             
             <div className="px-2">
@@ -306,11 +302,12 @@ const handleRatingSubmit = useCallback(async (payload) => {
         <div className="lg:col-span-4 space-y-6">
           <section className="bg-white p-8 rounded-[40px] shadow-2xl shadow-emerald-900/5 border border-emerald-100/50">
             {activeTripDetails ? (
-             <ActiveTripStatus 
+      <ActiveTripStatus 
   trip={activeTripDetails} 
-  currentUserEmail={user?.email} // 🎯 Pass the email
+  currentUserEmail={user?.email} 
+  currentUserId={user?.id || user?._id} 
   availableDiscounts={referralStats.availableDiscounts}
-  onRefresh={() => fetchDashboardData(user?.token)} // 🎯 Add refresh capability
+  onRefresh={() => fetchDashboardData(user?.token)} 
   onAddSeats={(bookingData) => handleBookRide(activeTripDetails.id || activeTripDetails._id, bookingData)}
 />
             ) : (
