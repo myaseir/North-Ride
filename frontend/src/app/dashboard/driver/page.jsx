@@ -262,7 +262,7 @@ const handleEndTrip = async (tripId) => {
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="p-2.5 bg-emerald-500/20 rounded-2xl"><Radio className="text-emerald-400 animate-pulse" size={20} /></div>
-                  <h2 className="text-xl font-black uppercase tracking-tighter italic text-white">New Dispatch</h2>
+                  <h2 className="text-xl font-black uppercase tracking-tighter italic text-white">New Ride</h2>
                 </div>
                 <TripPublisher onPublish={handlePublish} loading={isPublishing} />
               </div>

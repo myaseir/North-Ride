@@ -1,63 +1,99 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Navigation, Users, Play, Clock, Calendar, 
-  ArrowRight, Square, Circle
+  ArrowRight, Square, Loader2
 } from 'lucide-react';
 import { playPopSound } from '../../../utils/sounds';
 import { toast } from 'react-hot-toast';
 
 export default function DriverTripCard({ trip, onStart, onEnd }) {
   // --- STATE ---
-  // Status can be: 'scheduled', 'in-progress', 'completed'
   const [status, setStatus] = useState(trip.status || 'scheduled');
+  const [isActionLoading, setIsActionLoading] = useState(false);
   
   const passengerCount = trip.passengers?.length || 0;
-  const isFull = passengerCount >= trip.seats;
+  const isFull = passengerCount >= (trip.total_seats || 4);
 
-  // --- HANDLERS ---
-const handleStartTrip = async () => {
+  // --- DEBUGGING LOG ---
+  useEffect(() => {
+    console.log(`[Terminal Debug] Trip #${trip.id?.slice(-4)} Data:`, {
+      raw_date: trip.date,
+      raw_time: trip.time,
+      departure_iso: trip.departure_time
+    });
+  }, [trip]);
+
+  // --- HELPERS ---
+  const formatDisplayTime = (timeStr) => {
+    if (!timeStr) return "TBD";
     try {
-      playPopSound();
-      // Call the parent function which handles the API fetch
-      if (onStart) {
-        await onStart(trip.id);
-        setStatus('in-progress');
-      }
-    } catch (error) {
-      toast.error("Failed to start ride.");
+      const [hours, minutes] = timeStr.split(':');
+      const h = parseInt(hours);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 || 12;
+      return `${h12}:${minutes} ${ampm}`;
+    } catch (e) {
+      return timeStr;
     }
   };
 
- const handleEndTrip = async () => {
-  playPopSound();
-  
-  const confirmed = window.confirm("Are you sure the ride is finished? This will clear the manifest.");
-  
-  if (confirmed) {
-    // 1. Update local UI state immediately for speed
-    setStatus('completed'); 
-    
-    // 2. Trigger the API call
-    if (onEnd) {
-      await onEnd(trip.id); 
-      
-      // 🎯 THE CRITICAL ADDITION:
-      // If this component is inside the PassengerDashboard, 
-      // the parent needs to know the trip is GONE.
-      // Usually, this is handled by refreshing the parent's data:
-      window.location.reload(); // Quickest fix to clear all stale states
-      // OR better: call your fetchDashboardData() here if passed as a prop.
+  const formatDisplayDate = (dateStr) => {
+    if (!dateStr) return "Today";
+    try {
+      return new Date(dateStr).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short'
+      });
+    } catch (e) {
+      return dateStr;
     }
-  }
-};
+  };
+
+  // --- HANDLERS ---
+  const handleStartTrip = async () => {
+    try {
+      setIsActionLoading(true);
+      playPopSound();
+      if (onStart) {
+        await onStart(trip.id);
+        setStatus('in-progress');
+        toast.success("Ride started. Drive safely!");
+      }
+    } catch (error) {
+      toast.error("Failed to start ride.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleEndTrip = async () => {
+    const confirmed = window.confirm("Are you sure the ride is finished? This will complete the journey.");
+    if (confirmed) {
+      try {
+        setIsActionLoading(true);
+        playPopSound();
+        if (onEnd) {
+          await onEnd(trip.id);
+          setStatus('completed');
+          toast.success("Journey completed.");
+          // Give a small delay for the toast before refreshing
+          setTimeout(() => window.location.reload(), 1000);
+        }
+      } catch (error) {
+        toast.error("Failed to end ride.");
+      } finally {
+        setIsActionLoading(false);
+      }
+    }
+  };
 
   return (
     <div className={`bg-white border p-6 rounded-[35px] transition-all group relative overflow-hidden ${
       status === 'in-progress' ? 'border-emerald-500 shadow-xl shadow-emerald-100' : 'border-slate-100 shadow-sm'
     }`}>
       
-      {/* Status Badge & ID */}
+      {/* Header section */}
       <div className="flex justify-between items-start mb-6 relative z-10">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
@@ -67,83 +103,86 @@ const handleStartTrip = async () => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-widest ${
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-widest ${
                 status === 'in-progress' 
-                  ? 'bg-emerald-100 text-emerald-700 animate-bounce' 
+                  ? 'bg-emerald-100 text-emerald-700' 
                   : isFull ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-600'
               }`}>
                 {status === 'in-progress' ? '• Live Journey' : isFull ? 'Manifest Full' : 'Bookings Open'}
               </span>
             </div>
-            <h4 className="text-md font-black text-slate-900 uppercase mt-1 italic tracking-tighter">
+            <h4 className="text-md font-bold text-slate-900 uppercase mt-1 italic tracking-tight">
               {trip.origin} <ArrowRight size={14} className="inline mx-1 text-slate-300" /> {trip.destination}
             </h4>
           </div>
         </div>
-        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">#{trip.id?.slice(-4)}</span>
+        <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">#{trip.id?.slice(-4)}</span>
       </div>
 
-      {/* Info Grid */}
+      {/* Time & Date Grid */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
           <div className="flex items-center gap-2 text-slate-400 mb-1">
             <Calendar size={12} />
-            <span className="text-[9px] font-black uppercase tracking-widest">Date</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest">Schedule</span>
           </div>
-          <p className="text-xs font-bold text-slate-700">{trip.date || "Today"}</p>
+          <p className="text-xs font-bold text-slate-700">{formatDisplayDate(trip.date)}</p>
         </div>
         <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
           <div className="flex items-center gap-2 text-slate-400 mb-1">
             <Clock size={12} />
-            <span className="text-[9px] font-black uppercase tracking-widest">Time</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest">Departure</span>
           </div>
-          <p className="text-xs font-bold text-slate-700">{trip.time || "08:00 AM"}</p>
+          <p className="text-xs font-bold text-slate-700">{formatDisplayTime(trip.time)}</p>
         </div>
       </div>
 
-      {/* Bottom Action Bar */}
-      <div className={`flex items-center justify-between p-2 pl-5 rounded-[24px] border transition-colors ${
-        status === 'in-progress' ? 'bg-rose-500 border-rose-400 shadow-rose-200' : 'bg-slate-900 border-slate-800'
+      {/* Status Bar / Bottom Actions */}
+      <div className={`flex items-center justify-between p-2 pl-5 rounded-[24px] border transition-all ${
+        status === 'in-progress' ? 'bg-rose-600 border-rose-500' : 'bg-slate-950 border-slate-800'
       }`}>
         <div className="flex items-center gap-3">
           <div className="flex -space-x-2">
-            {[...Array(Math.min(passengerCount, 1))].map((_, i) => (
-              <div key={i} className="w-8 h-8 rounded-full bg-white/20 border-2 border-slate-900 flex items-center justify-center text-white">
-                <Users size={12} />
-              </div>
-            ))}
+            <div className="w-8 h-8 rounded-full bg-white/10 border-2 border-slate-900 flex items-center justify-center text-white">
+              <Users size={12} />
+            </div>
           </div>
           <div>
-            <p className="text-[10px] font-black text-white uppercase leading-none">
-              {passengerCount} Psgndr
+            <p className="text-[10px] font-bold text-white uppercase leading-none">
+              {passengerCount} Seats
             </p>
             <p className={`text-[8px] font-bold uppercase mt-1 tracking-widest ${status === 'in-progress' ? 'text-rose-100' : 'text-emerald-400'}`}>
-              PKR {trip.price?.toLocaleString()}
+              PKR {trip.price?.toLocaleString()} / SEAT
             </p>
           </div>
         </div>
         
-        {/* --- DYNAMIC BUTTON LOGIC --- */}
         {status === 'scheduled' ? (
           <button 
             onClick={handleStartTrip}
-            className="bg-emerald-500 text-slate-900 px-6 py-3.5 rounded-2xl hover:bg-white transition-all flex items-center gap-2 group active:scale-95"
+            disabled={isActionLoading}
+            className="bg-emerald-500 text-slate-950 px-6 py-3.5 rounded-2xl hover:bg-white transition-all flex items-center gap-2 group active:scale-95 disabled:opacity-50"
           >
-            <span className="text-[10px] font-black uppercase tracking-widest">Start Ride</span>
-            <Play size={14} fill="currentColor" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">
+              {isActionLoading ? 'Wait...' : 'Start Ride'}
+            </span>
+            {isActionLoading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="currentColor" />}
           </button>
         ) : (
           <button 
             onClick={handleEndTrip}
-            className="bg-white text-rose-600 px-6 py-3.5 rounded-2xl hover:bg-rose-50 transition-all flex items-center gap-2 group active:scale-95 shadow-lg"
+            disabled={isActionLoading}
+            className="bg-white text-rose-600 px-6 py-3.5 rounded-2xl hover:bg-rose-50 transition-all flex items-center gap-2 group active:scale-95 shadow-lg disabled:opacity-50"
           >
-            <span className="text-[10px] font-black uppercase tracking-widest text-rose-600">End Ride</span>
-            <Square size={14} fill="currentColor" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">
+              {isActionLoading ? 'Wait...' : 'End Ride'}
+            </span>
+            {isActionLoading ? <Loader2 size={14} className="animate-spin" /> : <Square size={14} fill="currentColor" />}
           </button>
         )}
       </div>
 
-      {/* Background Decoration */}
+      {/* Decorative pulse background */}
       <div className={`absolute -bottom-10 -right-10 w-32 h-32 rounded-full blur-3xl transition-colors ${
         status === 'in-progress' ? 'bg-rose-500/10' : 'bg-emerald-500/5'
       }`} />
