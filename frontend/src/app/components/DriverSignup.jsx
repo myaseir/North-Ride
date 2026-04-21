@@ -174,7 +174,7 @@ export default function DriverSignup({ onBack, onComplete }) {
             <ChevronLeft size={20} />
           </button>
           <div className="text-center">
-            <h2 className="text-xl font-bold text-slate-900 leading-none">Pilot Onboarding</h2>
+            <h2 className="text-xl font-bold text-slate-900 leading-none">Driver Registration</h2>
             <p className="text-[9px] font-black text-emerald-600/70 uppercase tracking-widest mt-1">Step {step} of 3</p>
           </div>
           <div className="w-10" />

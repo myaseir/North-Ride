@@ -114,7 +114,7 @@ export default function ForgetPassword({ onBack }) {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="text-center">
         <h2 className="text-xl font-black uppercase tracking-tighter text-slate-900">
-          Reset <span className="text-emerald-500">Access</span>
+          Reset <span className="text-emerald-500">Password</span>
         </h2>
         <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">
           {step === 'request' && 'Identity Verification'}
@@ -196,7 +196,7 @@ export default function ForgetPassword({ onBack }) {
           type="button" onClick={onBack}
           className="w-full text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-emerald-500 transition-colors"
         >
-          Return to Portal
+          Return
         </button>
       )}
     </div>
