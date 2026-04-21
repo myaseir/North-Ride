@@ -7,74 +7,90 @@ import { Users, Shield, MapPin, Cpu, CheckCircle, ArrowRight, Car } from 'lucide
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white text-slate-900 selection:bg-emerald-100">
       <Navbar />
 
       {/* --- HERO SECTION --- */}
-      <section className="pt-24 md:pt-40 pb-12 md:pb-20 px-6 text-center">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-7xl font-black text-slate-900 tracking-tight mb-6">
-            Our <span className="text-emerald-500 italic">Promise.</span>
+      <section className="pt-32 pb-16 px-6">
+        <div className="max-w-3xl mx-auto text-center">
+          <div className="inline-block px-3 py-1 mb-6 text-[10px] font-bold tracking-[0.2em] text-emerald-600 uppercase bg-emerald-50 rounded-full">
+            Our Mission
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900 mb-6">
+            Redefining travel across the <span className="text-emerald-500 font-medium italic">North.</span>
           </h1>
-          <p className="text-lg md:text-xl text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto">
-            We are more than just a car booking app. We are building a better way for people in the North to travel safely and comfortably.
+          <p className="text-base md:text-lg text-slate-500 leading-relaxed max-w-xl mx-auto">
+            North Ride is a digital bridge connecting travelers with the rugged beauty of Gilgit-Baltistan through safe, reliable, and modern transport solutions.
           </p>
         </div>
       </section>
 
       {/* --- THE VISION (Glacia Labs) --- */}
-      <section className="py-12 md:py-20 bg-slate-900 text-white rounded-[2rem] md:rounded-[3rem] mx-4 md:mx-8 px-6">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <div className="order-2 md:order-1">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 rounded-full border border-emerald-500/30 mb-6">
-              <Cpu size={14} className="text-emerald-400" />
-              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Built Locally</span>
+      <section className="py-10 px-4 md:px-8">
+        <div className="max-w-6xl mx-auto bg-slate-950 rounded-[2rem] overflow-hidden border border-slate-800">
+          <div className="grid grid-cols-1 md:grid-cols-2 items-center">
+            <div className="p-8 md:p-16">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="h-[1px] w-8 bg-emerald-500"></div>
+                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Engineering Excellence</span>
+              </div>
+              <h2 className="text-2xl md:text-3xl font-semibold text-white mb-6">
+                Developed by <span className="text-emerald-400">Glacia Labs</span>
+              </h2>
+              <p className="text-slate-400 text-sm md:text-base mb-8 leading-relaxed font-light">
+                Born in the mountains, engineered for the world. We identified a gap in regional infrastructure and built a custom high-performance platform that works seamlessly even in low-connectivity zones.
+              </p>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="flex items-center gap-3 text-xs font-medium text-slate-300">
+                  <CheckCircle size={16} className="text-emerald-500"/> Low-latency booking architecture
+                </div>
+                <div className="flex items-center gap-3 text-xs font-medium text-slate-300">
+                  <CheckCircle size={16} className="text-emerald-500"/> Transparent algorithmic pricing
+                </div>
+              </div>
             </div>
-            <h2 className="text-3xl md:text-5xl font-bold mb-6">Made by <span className="text-emerald-400">Glacia Labs</span></h2>
-            <p className="text-slate-300 text-base md:text-lg mb-8 leading-relaxed">
-              North Ride was created to fix travel problems in our mountains. We believe technology should help our local drivers earn more and our passengers travel better.
-            </p>
-            <ul className="space-y-4">
-              <li className="flex items-center gap-3 text-sm font-semibold"><CheckCircle size={18} className="text-emerald-500"/> Faster bookings, even with slow internet</li>
-              <li className="flex items-center gap-3 text-sm font-semibold"><CheckCircle size={18} className="text-emerald-500"/> Honest and clear pricing for everyone</li>
-            </ul>
-          </div>
-          <div className="aspect-square bg-emerald-500/10 rounded-2xl border border-white/5 flex items-center justify-center order-1 md:order-2">
-              <Car size={80} className="md:w-32 md:h-32 text-emerald-500 opacity-50" />
+            <div className="bg-slate-900 h-full min-h-[300px] flex items-center justify-center border-l border-slate-800">
+              <Car size={100} strokeWidth={1} className="text-emerald-500/20" />
+            </div>
           </div>
         </div>
       </section>
 
       {/* --- CORE VALUES --- */}
-      <section className="py-20 max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+      <section className="py-24 max-w-6xl mx-auto px-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
           <ValueCard 
-            icon={<Users className="text-emerald-500" />} 
-            title="Respect Drivers" 
-            desc="Our drivers (Captains) are our partners. We give them the best tools to manage their work." 
+            icon={<Users size={20} className="text-emerald-600" />} 
+            title="Captain Partnership" 
+            desc="We treat our drivers as partners, providing them with professional-grade tools to manage their earnings and routes." 
           />
           <ValueCard 
-            icon={<Shield className="text-emerald-500" />} 
-            title="Safe Travel" 
-            desc="Your safety is our priority. Every ride is tracked to keep you and your family safe." 
+            icon={<Shield size={20} className="text-emerald-600" />} 
+            title="Safety First" 
+            desc="Our multi-layered safety protocol ensures that every journey is tracked and every passenger is protected." 
           />
           <ValueCard 
-            icon={<MapPin className="text-emerald-500" />} 
-            title="Local Pride" 
-            desc="Built specifically for the roads and people of Gilgit Baltistan." 
+            icon={<MapPin size={20} className="text-emerald-600" />} 
+            title="Regional Focus" 
+            desc="Deeply rooted in Gilgit-Baltistan, our service is optimized for the unique logistics of northern terrain." 
           />
         </div>
       </section>
 
       {/* --- CTA SECTION --- */}
-      <section className="py-12 pb-24 px-4">
-        <div className="max-w-5xl mx-auto bg-emerald-500 rounded-[2.5rem] p-10 md:p-16 text-center text-white">
-          <h2 className="text-3xl md:text-5xl font-black mb-8">Ready to travel with us?</h2>
-          <Link href="/login" className="inline-flex w-full md:w-auto items-center justify-center gap-3 px-10 py-4 bg-white text-emerald-600 rounded-xl font-bold uppercase text-xs tracking-widest hover:bg-slate-900 hover:text-white transition-all shadow-lg">
-            Start Booking Now <ArrowRight size={16} />
-          </Link>
-          <p className="mt-6 text-emerald-100 text-[10px] font-bold tracking-[0.3em] uppercase opacity-70">
-            North Ride v3.0
+      <section className="py-20 px-6">
+        <div className="max-w-4xl mx-auto text-center border-t border-slate-100 pt-20">
+          <h2 className="text-3xl font-bold mb-8 tracking-tight">Ready for your next journey?</h2>
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4">
+            <Link href="/login" className="px-8 py-4 bg-emerald-600 text-white rounded-lg text-[11px] font-bold uppercase tracking-widest hover:bg-emerald-700 transition-all">
+              Book a Ride
+            </Link>
+            <Link href="/contact" className="px-8 py-4 bg-white text-slate-900 border border-slate-200 rounded-lg text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all">
+              Contact Support
+            </Link>
+          </div>
+          <p className="mt-12 text-[9px] font-medium text-slate-400 uppercase tracking-[0.4em]">
+            North Ride Digital Ecosystem &bull; 2026
           </p>
         </div>
       </section>
@@ -86,12 +102,12 @@ export default function AboutPage() {
 
 function ValueCard({ icon, title, desc }) {
   return (
-    <div className="text-center md:text-left">
-      <div className="w-14 h-14 bg-slate-50 rounded-xl flex items-center justify-center mb-6 mx-auto md:mx-0">
+    <div className="group">
+      <div className="w-12 h-12 bg-slate-50 rounded-lg flex items-center justify-center mb-6 group-hover:bg-emerald-50 transition-colors">
         {icon}
       </div>
-      <h4 className="text-lg font-bold text-slate-900 mb-3 uppercase tracking-tight">{title}</h4>
-      <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
+      <h4 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-wider">{title}</h4>
+      <p className="text-slate-500 text-[13px] leading-relaxed font-light">{desc}</p>
     </div>
   );
 }

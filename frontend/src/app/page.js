@@ -1,124 +1,118 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Auth from './components/Auth'; 
 import Footer from './components/Footer';
 import Navbar from './components/Navbar'; 
 import { 
-  Loader2, Smartphone, ShieldCheck, 
-  Zap, Globe
+  Loader2, ShieldCheck, 
+  Zap, Globe, ChevronDown
 } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
+  // This part checks if the user is already logged in
   useEffect(() => {
-    // Auth Check
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
     if (token && userStr) {
-      try { 
-        JSON.parse(userStr); 
-        setLoading(false); 
-      } catch (e) { 
-        setLoading(false); 
-      }
-    } else { 
-      setLoading(false); 
-    }
-  }, []);
+      try {
+        const userData = JSON.parse(userStr);
+        // Send user to their dashboard based on their role
+        router.push(userData.roles?.includes("DRIVER") ? '/dashboard/driver' : '/dashboard/passenger');
+      } catch (e) { setLoading(false); }
+    } else { setLoading(false); }
+  }, [router]);
 
+  // This saves login info and moves the user forward
   const handleLoginSuccess = (apiResponse) => {
-    const userData = apiResponse.user;
     localStorage.setItem("token", apiResponse.access_token);
-    localStorage.setItem("user", JSON.stringify(userData));
-    router.push(userData.roles?.includes("DRIVER") ? '/dashboard/driver' : '/dashboard/passenger');
+    localStorage.setItem("user", JSON.stringify(apiResponse.user));
+    router.push(apiResponse.user.roles?.includes("DRIVER") ? '/dashboard/driver' : '/dashboard/passenger');
   };
 
+  // Simple loading screen
   if (loading) return (
     <div className="h-screen flex items-center justify-center bg-white">
-      <Loader2 className="animate-spin text-emerald-500" size={40} />
+      <Loader2 className="animate-spin text-emerald-500" size={24} />
     </div>
   );
 
   return (
-    <main className="min-h-screen bg-[#f8fafc] selection:bg-emerald-100 selection:text-emerald-900">
-      
-      {/* --- IMPORTED NAVBAR --- */}
+    <main className="min-h-screen bg-white">
       <Navbar />
 
-      {/* --- HERO SECTION --- */}
-      <section className="relative pt-32 md:pt-56 pb-16 md:pb-20 px-4 md:px-6 overflow-hidden">
-        <div className="max-w-7xl mx-auto text-center relative z-10">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-emerald-50 rounded-full border border-emerald-100 mb-6 md:mb-8 animate-bounce">
-            <Zap size={12} className="text-emerald-500 md:w-3.5 md:h-3.5" />
-            <span className="text-[9px] md:text-[10px] font-black text-emerald-700 uppercase tracking-widest">Next-Gen Mobility is Here</span>
+      {/* --- MAIN HERO SECTION --- */}
+      <section className="relative min-h-screen flex flex-col justify-center pt-28 pb-12 px-6 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-50/40 via-white to-white">
+        
+        <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          
+          {/* Text Side */}
+          <div className="text-center lg:text-left space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold uppercase tracking-wider">
+              <Zap size={12} fill="currentColor" />
+              <span>North Ride v3.0</span>
+            </div>
+            
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 leading-tight">
+              A Better Way to <br className="hidden lg:block" />
+              <span className="text-emerald-500 italic">Travel Together.</span>
+            </h1>
+            
+            <p className="text-slate-500 text-sm md:text-base font-normal max-w-sm mx-auto lg:mx-0 leading-relaxed">
+              Sign in to book rides or manage your fleet. We make travel in the North simple and safe.
+            </p>
           </div>
 
-          {/* Headline - Responsive sizing: text-4xl on mobile, text-8xl on desktop */}
-          <h1 className="text-4xl sm:text-6xl md:text-8xl font-[1000] text-slate-900 tracking-tight leading-[1.1] md:leading-[0.9] mb-6 md:mb-8 px-2">
-            Ride into the <br className="hidden md:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-600 italic">Future.</span>
-          </h1>
-
-          {/* Paragraph */}
-          <p className="max-w-2xl mx-auto text-slate-500 text-base md:text-xl font-medium leading-relaxed mb-10 md:mb-12 px-4">
-            The world's most intelligent fleet terminal. Built for captains, designed for passengers, powered by Glacia Labs.
-          </p>
-
-          {/* Buttons - Stacked on mobile, row on small screens up */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 px-6">
-            <Link 
-              href="/download"
-              className="w-full sm:w-auto px-8 md:px-10 py-4 md:py-5 bg-slate-900 text-center text-white rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-[0.2em] shadow-xl md:shadow-2xl shadow-slate-300 hover:bg-emerald-600 transition-all active:scale-95"
-            >
-              Download App
-            </Link>
-            <Link 
-              href="/about"
-              className="w-full sm:w-auto px-8 md:px-10 py-4 md:py-5 bg-white text-center text-slate-900 rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-[0.2em] border border-slate-200 hover:bg-slate-50 transition-all active:scale-95"
-            >
-              Learn More
-            </Link>
+          {/* Form Side - Locked width so it doesn't stretch on laptops */}
+          <div className="w-full flex justify-center lg:justify-end">
+            <div className="w-full max-w-[400px] relative">
+              {/* Soft glow behind the box */}
+              <div className="absolute -inset-1 bg-emerald-100 rounded-[2rem] blur-xl opacity-40" />
+              
+              <div className="relative bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
+                {/* Form Padding */}
+                <div className="p-6 md:p-10">
+                  <Auth onLoginSuccess={handleLoginSuccess} />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        
-        {/* Background Decor - Responsive Height */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] md:h-[800px] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-emerald-50/50 via-transparent to-transparent -z-10" />
+
+        {/* Small arrow pointing down */}
+        <div className="hidden md:flex flex-col items-center mt-12 opacity-30">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Scroll Down</span>
+          <ChevronDown size={14} className="animate-bounce text-slate-400" />
+        </div>
       </section>
 
-      {/* --- FEATURES GRID --- */}
-      <section className="py-16 md:py-24 max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-        <FeatureCard 
-          icon={<ShieldCheck className="text-emerald-500" />}
-          title="Secure Transit"
-          desc="Military-grade encryption for every ride request and financial transaction."
-        />
-        <FeatureCard 
-          icon={<Globe className="text-blue-500" />}
-          title="Global Fleet"
-          desc="Access high-end vehicles across multiple cities with a single tap."
-        />
-        <FeatureCard 
-          icon={<Smartphone className="text-purple-500" />}
-          title="Smart Wallet"
-          desc="Automated payment audits and instant shift revenue tracking for captains."
-        />
-      </section>
-
-      {/* --- AUTH SECTION --- */}
-      <section id="auth-section" className="py-16 md:py-24 bg-white relative">
-        <div className="max-w-7xl mx-auto px-4 md:px-6">
-          <div className="text-center mb-10 md:mb-16">
-            <h2 className="text-3xl md:text-4xl font-black text-slate-900 uppercase italic tracking-tighter">Terminal Access</h2>
-            <p className="text-slate-400 font-bold uppercase text-[9px] md:text-[10px] tracking-[0.3em] md:tracking-[0.4em] mt-2">Secure Login / Registration</p>
-          </div>
-          <div className="w-full max-w-md mx-auto">
-            <Auth onLoginSuccess={handleLoginSuccess} />
+      {/* --- INFO BOXES --- */}
+      <section className="py-20 bg-slate-950 text-white rounded-t-[2.5rem] lg:rounded-t-[4rem]">
+        <div className="max-w-6xl mx-auto px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            
+            <FeatureCard 
+              icon={<ShieldCheck size={20} className="text-emerald-400" />}
+              title="Very Safe"
+              desc="We protect your data and your trips with high-level security."
+            />
+            
+            <FeatureCard 
+              icon={<Globe size={20} className="text-emerald-400" />}
+              title="Made for You"
+              desc="Specifically built for the unique roads in the North."
+            />
+            
+            <FeatureCard 
+              icon={<Zap size={20} className="text-emerald-400" />}
+              title="Fast Booking"
+              desc="Book your ride in seconds without any lag or waiting."
+            />
+            
           </div>
         </div>
       </section>
@@ -128,16 +122,15 @@ export default function Home() {
   );
 }
 
-// --- SUB-COMPONENTS ---
-
+// Small helper component for the three boxes at the bottom
 function FeatureCard({ icon, title, desc }) {
   return (
-    <div className="p-8 md:p-10 bg-white rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 hover:shadow-2xl hover:shadow-slate-200 transition-all group">
-      <div className="w-12 h-12 md:w-14 md:h-14 bg-slate-50 rounded-xl md:rounded-2xl flex items-center justify-center mb-5 md:mb-6 group-hover:scale-110 transition-transform">
+    <div className="flex flex-col items-center text-center md:items-start md:text-left">
+      <div className="mb-4 p-3 bg-white/5 rounded-lg border border-white/10">
         {icon}
       </div>
-      <h3 className="text-lg md:text-xl font-black text-slate-900 mb-3">{title}</h3>
-      <p className="text-slate-500 text-sm leading-relaxed font-medium">{desc}</p>
+      <h3 className="text-xs font-bold mb-2 uppercase tracking-widest text-white">{title}</h3>
+      <p className="text-slate-400 text-[12px] leading-relaxed max-w-[240px]">{desc}</p>
     </div>
   );
 }
