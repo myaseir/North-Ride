@@ -34,7 +34,7 @@ export default function Auth({ onLoginSuccess }) {
   // 1. Full-Screen Driver Onboarding
   if (isApplyingForDriver) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F9FBF9] p-4">
+      <div className="min-h-screen flex items-center justify-center bg-[#F9FBF9] ">
         <DriverSignup 
           onBack={() => setIsApplyingForDriver(false)} 
           onComplete={() => {
@@ -112,12 +112,12 @@ export default function Auth({ onLoginSuccess }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F9FBF9] p-4 font-sans selection:bg-emerald-100 selection:text-emerald-900 animate-in fade-in duration-500">
+    <div className="min-h-screen flex items-center justify-center bg-[#F9FBF9]  font-sans selection:bg-emerald-100 selection:text-emerald-900 animate-in fade-in duration-500">
       <div className="w-full max-w-[460px] z-10">
         <div className="bg-white rounded-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.02)] border border-emerald-100/50 overflow-hidden">
           
           {/* BRANDING */}
-          <div className="pt-12 pb-8 px-10 flex flex-col items-center text-center">
+          <div className=" pb-8 px-10 flex flex-col items-center text-center">
   {/* Logo is the Hero */}
   <div className="mb-6 w-full flex justify-center">
     <img 
