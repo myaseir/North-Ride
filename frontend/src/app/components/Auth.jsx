@@ -110,9 +110,10 @@ export default function Auth({ onLoginSuccess }) {
       setLoading(false);
     }
   };
+  
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F9FBF9]  font-sans selection:bg-emerald-100 selection:text-emerald-900 animate-in fade-in duration-500">
+    <div className="min-h-screen flex items-start justify-center bg-[#F9FBF9]  font-sans selection:bg-emerald-100 selection:text-emerald-900 animate-in fade-in duration-500">
       <div className="w-full max-w-[460px] z-10">
         <div className="bg-white rounded-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.02)] border border-emerald-100/50 overflow-hidden">
           
