@@ -65,22 +65,29 @@ class RedisManager:
         
     async def acquire_seat_locks(self, trip_id: str, seats: list[str], expiry: int = 600) -> bool:
         """
-        Attempts to lock seats atomically. 
-        Returns True only if ALL seats in the list were successfully locked.
+        Attempts to lock seats atomically for North Ride.
         """
         try:
-            # Upstash Pipeline
+            # 1. Pre-check: See if any of these seats are already locked
+            # This prevents the "cleanup" logic from firing on existing locks
+            keys = [f"lock:trip:{trip_id}:seat:{seat}" for seat in seats]
+            existing_locks = await redis_client.exists(*keys)
+            if existing_locks > 0:
+                return False
+
+            # 2. Attempt Atomic Lock via Pipeline
             pipe = redis_client.pipeline()
             for seat in seats:
                 lock_key = f"lock:trip:{trip_id}:seat:{seat}"
-                # nx=True: Set only if the key does not exist
+                # nx=True is the "Gold Standard" for distributed locking
                 pipe.set(lock_key, "hold", ex=expiry, nx=True)
             
             results = await pipe.exec()
             
-            # In the Upstash HTTP SDK, if nx=True fails because the key exists, it returns None.
-            if any(r is None or r is False for r in results):
-                # Cleanup: Release any partial locks we just made
+            # 3. Validation
+            # Upstash returns "OK" for success and None for failure with nx=True
+            if any(r != "OK" and r is not True for r in results):
+                # Only cleanup if we actually created partial locks
                 await self.release_seat_locks(trip_id, seats)
                 return False
             
