@@ -28,11 +28,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     if not user_id:
         raise credentials_exception
         
-    # --- 🛡️ REDIS HEARTBEAT ---
-    try:
-        await redis_mgr.set_player_online(user_id)
-    except Exception as e:
-        logger.error(f"Redis Heartbeat Failed: {e}")
+    # 🎯 FIX: Removed the Redis Heartbeat. 
+    # Every authenticated API call is now 1 network request faster, 
+    # saving massive execution time on Vercel and Upstash quotas.
     
     # Fetch User
     user = await repo.get_by_id(user_id)
@@ -48,12 +46,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 # --- 🚀 ROLE GUARDS ---
 
 async def get_current_admin(current_user: dict = Depends(get_current_user)):
-    """
-    FIXED: Now checks the 'roles' array for 'ADMIN'.
-    """
+    """Now checks the 'roles' array for 'ADMIN'."""
     roles = current_user.get("roles", [])
     
-    # Check for ADMIN in the roles list
     if "ADMIN" not in roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
@@ -89,24 +84,22 @@ async def require_verified_email(current_user: dict = Depends(get_current_user))
         )
     return current_user
 
-from app.repositories.booking_repo import BookingRepository
-from app.repositories.user_repo import UserRepository
-from app.services.trip_service import RatingService, TripService # Adjust path if needed
+# --- 🏭 FACTORY DEPENDENCIES (Cleaned up imports) ---
 
 def get_rating_service():
-    # Pass the repos into the service as defined in your __init__
+    from app.repositories.booking_repo import BookingRepository
+    from app.repositories.user_repo import UserRepository
+    from app.services.trip_service import RatingService 
+    
     return RatingService(
         booking_repo=BookingRepository(),
         user_repo=UserRepository()
     )
 
 def get_trip_service():
+    from app.services.trip_service import TripService
     return TripService()
-from app.services.trip_service import RatingService # Use your actual filename
-
-
-from app.repositories.booking_repo import BookingRepository
 
 def get_booking_repo():
-    """Factory function to provide a BookingRepository instance."""
+    from app.repositories.booking_repo import BookingRepository
     return BookingRepository()

@@ -4,7 +4,7 @@ import logging
 
 logger = logging.getLogger("uvicorn.error")
 
-# Initialize Upstash Redis Client
+# Initialize Upstash Redis Client (HTTP Based for Serverless/Vercel)
 redis_client = Redis(
     url=settings.UPSTASH_REDIS_REST_URL, 
     token=settings.UPSTASH_REDIS_REST_TOKEN
@@ -12,8 +12,8 @@ redis_client = Redis(
 
 class RedisManager:
     """
-    Centralized manager for Redis operations including location tracking
-    and atomic ride-matching.
+    Centralized manager for Redis operations optimized for serverless architecture.
+    Focuses purely on stateless operations: Auth, Geo-tracking, and Atomic Locks.
     """
     
     @property
@@ -23,11 +23,11 @@ class RedisManager:
     # --- 🔐 AUTH & VERIFICATION HELPERS ---
 
     async def set_verification_token(self, email: str, status: str = "true", expiry: int = 900):
-        """Step 3: Marks email as verified for 15 mins to allow registration."""
+        """Marks email as verified for 15 mins to allow registration."""
         await redis_client.set(f"verified_status:{email}", status, ex=expiry)
 
     async def check_verification(self, email: str) -> bool:
-        """Step 4: Safety check before final DB commit."""
+        """Safety check before final DB commit."""
         val = await redis_client.get(f"verified_status:{email}")
         return val == "true"
 
@@ -61,18 +61,11 @@ class RedisManager:
             logger.error(f"Redis Search Error: {e}")
             return []
 
-    # --- ⚡ STATUS & HEARTBEAT ---
-
-    async def set_user_status(self, user_id: str, status: str, expiry: int = 3600):
-        await redis_client.set(f"user_status:{user_id}", status, ex=expiry)
-
-    async def set_player_online(self, user_id: str):
-        """Used for heartbeat. If this expires, driver is considered offline."""
-        await redis_client.set(f"online:{user_id}", "true", ex=60)
+    # --- 🔒 ATOMIC LOCKING (NO HEARTBEATS) ---
         
     async def acquire_seat_locks(self, trip_id: str, seats: list[str], expiry: int = 600) -> bool:
         """
-        Attempts to lock seats. 
+        Attempts to lock seats atomically. 
         Returns True only if ALL seats in the list were successfully locked.
         """
         try:
@@ -83,11 +76,10 @@ class RedisManager:
                 # nx=True: Set only if the key does not exist
                 pipe.set(lock_key, "hold", ex=expiry, nx=True)
             
-            # 🎯 THE FIX: Use .exec() for Upstash SDK, not .execute()
             results = await pipe.exec()
             
-            # If 'None' or 'False' exists in results, it means a seat was already taken
-            if None in results or False in results:
+            # In the Upstash HTTP SDK, if nx=True fails because the key exists, it returns None.
+            if any(r is None or r is False for r in results):
                 # Cleanup: Release any partial locks we just made
                 await self.release_seat_locks(trip_id, seats)
                 return False

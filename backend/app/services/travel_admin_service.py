@@ -2,6 +2,7 @@ from app.repositories.booking_repo import BookingRepository
 from app.repositories.user_repo import UserRepository
 from app.services.notification_service import NotificationService
 from app.repositories.trip_repo import TripRepository
+from app.db.redis import redis_mgr  # 🎯 IMPORT REDIS
 import logging
 
 logger = logging.getLogger("uvicorn.error")
@@ -12,14 +13,15 @@ class TravelAdminService:
         self.user_repo = UserRepository()
         self.trip_repo = TripRepository()
         self.notif_service = NotificationService()
+        self.redis = redis_mgr # 🎯 INITIALIZE REDIS
 
-    # 🎯 FIX: Indented inside the class
     async def verify_and_confirm_booking(self, booking_id: str, driver_id: str, overwrites: dict = None):
         """
         The Fixed 'Gold Flow': 
         1. Fetches base driver data.
         2. Merges overwrites (Admin inputs) with base data.
         3. Passes merged data to booking_repo to update BOTH Booking and Trip collections.
+        4. Releases Redis locks.
         """
         
         # 1. Gather Driver info from DB as the "Base" layer first
@@ -27,20 +29,22 @@ class TravelAdminService:
         if not original_driver:
             return {"success": False, "error": "Assigned driver ID does not exist in the system."}
 
-        # 2. Merge Logic: Defensive dictionary access for driver_profile
+        # 2. Merge Logic: Defensive dictionary access for driver_profile and vehicle
         profile = original_driver.get('driver_profile') or {}
+        vehicle = profile.get('vehicle') or {} # 🎯 FIX: Safely access nested vehicle data
         
         final_overwrites = {
             "name": (overwrites.get("name") if overwrites and overwrites.get("name") else None) 
                     or original_driver.get("full_name", "Professional Captain"),
             
             "contact_1": (overwrites.get("contact_1") if overwrites and overwrites.get("contact_1") else None) 
-                         or original_driver.get("phone", "Contact via App"),
+                         or original_driver.get("phone", original_driver.get("phone_number", "Contact via App")),
             
             "contact_2": overwrites.get("contact_2") if overwrites else None,
             
+            # 🎯 FIX: Align with your auth.py and driver database schema
             "car_details": (overwrites.get("car_details") if overwrites and overwrites.get("car_details") else None) 
-                           or f"{profile.get('car_model', 'Vehicle')} - {profile.get('plate_no', 'N/A')}"
+                           or f"{vehicle.get('model', vehicle.get('make_model', 'Vehicle'))} - {vehicle.get('plate', vehicle.get('plate_number', 'N/A'))}"
         }
 
         # 3. Update the Database via Repository
@@ -52,24 +56,30 @@ class TravelAdminService:
         if booking_success == "NO_SEATS":
             return {"success": False, "error": "Cannot confirm: The cabin reached full capacity."}
 
-        # 4. Re-fetch for notification metadata (Passenger ID, Trip ID)
+        # 4. Re-fetch for notification metadata & Redis Cleanup
         booking = await self.booking_repo.get_by_id(booking_id)
 
-        # 5. Notification Logic
-        try:
-            if booking:
+        if booking:
+            # 🎯 CRITICAL FIX: Destroy the Redis lock so the system knows the seats are permanently handled
+            await self.redis.release_seat_locks(
+                str(booking.get("trip_id")), 
+                booking.get("seat_layout", [])
+            )
+
+            # 5. Notification Logic
+            try:
                 user = await self.user_repo.get_by_id(str(booking.get("passenger_id")))
                 trip = await self.trip_repo.get_by_id(str(booking.get("trip_id")))
                 
                 if user and trip:
                     await self.notif_service.send_booking_confirmation(
                         user_email=user["email"],
-                        user_name=user["username"],
+                        user_name=user.get("username", user.get("full_name", "Passenger")),
                         trip_details=trip,
                         driver_info=final_overwrites 
                     )
-        except Exception as e:
-            logger.error(f"Notification failure for booking {booking_id}: {e}")
+            except Exception as e:
+                logger.error(f"Notification failure for booking {booking_id}: {e}")
 
         return {
             "success": True, 

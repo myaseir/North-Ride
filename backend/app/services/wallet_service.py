@@ -14,21 +14,22 @@ class WalletService:
 
     async def process_driver_payout(self, driver_id: str, amount: float):
         """
-        Calculates the platform fee (10%) and pays the driver.
-        Used when a trip is marked as 'completed'.
+        Calculates the platform fee (5%) and pays the driver.
+        Used when a trip is marked as 'completed' and paid internally.
         """
         if amount <= 0:
             logger.warning(f"Attempted invalid payout of {amount} to driver {driver_id}")
             return False
 
-        # Convert to Decimal for precision
+        # Convert to Decimal for financial precision
         total = Decimal(str(amount))
-        platform_fee = total * Decimal("0.10")
+        # 🎯 FIXED: Aligned with the 5% global commission rule
+        platform_fee = total * Decimal("0.05")
         final_payout = total - platform_fee
         
         rounded_payout = self._format_currency(final_payout)
         
-        logger.info(f"Processing payout: Total {amount} | Fee {platform_fee} | Driver Net {rounded_payout}")
+        logger.info(f"Processing internal payout: Total {amount} | Fee {platform_fee} | Driver Net {rounded_payout}")
         return await self.user_repo.update_wallet(driver_id, rounded_payout)
 
     async def refund_passenger(self, user_id: str, amount: float):
@@ -55,5 +56,5 @@ class WalletService:
         if not user:
             return False
             
-        current_balance = user.get("wallet_balance", 0.0)
+        current_balance = float(user.get("wallet_balance", 0.0))
         return current_balance >= required_amount

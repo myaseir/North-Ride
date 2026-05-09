@@ -1,3 +1,4 @@
+from __future__ import annotations
 from app.repositories.trip_repo import TripRepository
 from app.repositories.booking_repo import BookingRepository
 from app.repositories.user_repo import UserRepository  # 🎯 Added
@@ -48,7 +49,7 @@ class TripService:
         # 🎯 LINK DRIVER: Ensure driver profile reflects this active trip
         await self.user_repo.set_active_trip(driver_id, str(trip_id))
         
-        return trip_id
+        return str(trip_id)
 
     async def book_seat(
         self, 
@@ -60,7 +61,7 @@ class TripService:
         transaction_id: str, 
         seat_layout: list[str],
         account_number: str,
-        amount_paid: float # This is the 100% Total from the frontend
+        amount_paid: float 
         ):
         """
         Locks seats in Redis and creates a Pending Booking + Links Passenger.
@@ -72,12 +73,8 @@ class TripService:
         if trip.get("status") != "scheduled":
             raise HTTPException(status_code=400, detail="Trip no longer accepting bookings.")
 
-    # 🛡️ REDIS SAFETY: Attempt seat locking
-        lock_acquired = True
-        try:
-            lock_acquired = await self.redis.acquire_seat_locks(trip_id, seat_layout)
-        except Exception as redis_err:
-            logger.warning(f"Redis unavailable, skipping lock: {redis_err}")
+        # 🛡️ REDIS SAFETY: Attempt seat locking (HTTP/Serverless Safe)
+        lock_acquired = await self.redis.acquire_seat_locks(trip_id, seat_layout)
 
         if not lock_acquired:
             raise HTTPException(
@@ -86,8 +83,7 @@ class TripService:
             )
 
         try:
-        # 🎯 Pass the 100% total to the repository
-        # The Repo logic handles the internal 20% vs 80% split
+            # 🎯 Atomic Insertion: Let MongoDB handle the conflicts
             booking_id = await self.booking_repo.create_pending(
                 user_id=user_id,
                 passenger_name=passenger_name,
@@ -100,29 +96,26 @@ class TripService:
                 account_number=account_number 
             )
 
-        # 🎯 MATCH: Repository returns "SEATS_TAKEN" on conflict
+            # 🎯 MATCH: Repository returns "SEATS_TAKEN" on conflict
             if booking_id == "SEATS_TAKEN":
-                try:
-                    await self.redis.release_seat_locks(trip_id, seat_layout)
-                except: pass
+                # Ensure we release locks if Mongo rejected it
+                await self.redis.release_seat_locks(trip_id, seat_layout)
                 raise HTTPException(status_code=400, detail="One or more selected seats are already booked.")
 
-        # Link the passenger to this trip for /api/trips/active
+            # Link the passenger to this trip for /api/trips/active
             await self.user_repo.set_active_trip(user_id, trip_id)
 
             return booking_id
 
         except Exception as e:
-        # Clean up Redis on any failure
-            try:
-                await self.redis.release_seat_locks(trip_id, seat_layout)
-            except: pass
-            raise e
+            # Clean up Redis on ANY backend failure to prevent dead seats
+            await self.redis.release_seat_locks(trip_id, seat_layout)
+            if isinstance(e, HTTPException):
+                raise e
+            logger.error(f"Booking Error: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to process booking.")
     
     async def get_driver_manifest(self, trip_id: str, driver_id: str):
-        """
-        Fetches passenger list for the driver.
-        """
         trip = await self.trip_repo.get_by_id(trip_id)
         if not trip:
             raise HTTPException(status_code=404, detail="Trip not found")
@@ -142,7 +135,6 @@ class TripService:
         }
 
     async def start_trip(self, trip_id: str, driver_id: str):
-        """Transition from 'scheduled' to 'in-progress'"""
         trip = await self.trip_repo.get_by_id(trip_id)
         if not trip:
              raise HTTPException(status_code=404, detail="Trip not found")
@@ -162,13 +154,13 @@ class TripService:
         if str(trip["driver_id"]) != str(driver_id):
             raise HTTPException(status_code=403, detail="Unauthorized.")
 
-    # Fetch Manifest BEFORE changing status to ensure we get confirmed passengers
+        # Fetch Manifest BEFORE changing status to ensure we get confirmed passengers
         manifest = await self.booking_repo.get_trip_manifest(trip_id)
 
-    # 1. Update Trip Status
+        # 1. Update Trip Status
         await self.trip_repo.update_trip_status(trip_id, "completed")
 
-    # 2. Update ALL bookings for this trip to "completed"
+        # 2. Update ALL bookings for this trip to "completed"
         await self.booking_repo.collection.update_many(
             {
                 "trip_id": self.booking_repo._to_id(trip_id), 
@@ -185,14 +177,14 @@ class TripService:
             }
         )
 
-    # 3. 🎯 REVENUE CALCULATION: Use total_price (Base + Surcharge)
+        # 3. 🎯 REVENUE CALCULATION: Use total_price (Base + Surcharge)
         total_revenue = sum(
             float(b.get("total_price", 0)) 
             for b in manifest 
             if b.get("status") in ["confirmed", "completed"]
         )
 
-    # 4. CLEANUP: Unlink all passengers and the driver
+        # 4. CLEANUP: Unlink all passengers and the driver
         for booking in manifest:
             passenger_id = str(booking.get("passenger_id"))
             if passenger_id and passenger_id != "None":
@@ -203,7 +195,6 @@ class TripService:
         return {"status": "success", "earnings": total_revenue}
 
     async def verify_payment(self, booking_id: str):
-        """Admin Verification: Confirms seat and releases Redis lock."""
         booking = await self.booking_repo.mark_as_confirmed(booking_id)
         if not booking:
              raise HTTPException(status_code=404, detail="Booking not found.")
@@ -211,105 +202,75 @@ class TripService:
         if booking == "NO_SEATS":
             raise HTTPException(status_code=400, detail="Trip capacity reached.")
 
-        # Release the temporary Redis lock because the seat is now permanently booked in Mongo
         await self.redis.release_seat_locks(str(booking["trip_id"]), booking["seat_layout"])
-        
-        # 🎯 ADDED LOG: Useful for debugging verification flow
         logger.info(f"Verified booking {booking_id} for trip {booking['trip_id']}")
         
         return booking
 
     async def reject_booking(self, booking_id: str):
-        """Admin Rejection: Frees seat and releases Redis lock + Unlinks User."""
         booking = await self.booking_repo.get_booking_by_id(booking_id)
         if not booking:
             raise HTTPException(status_code=404, detail="Booking not found.")
 
-        # Release Redis Lock
         await self.redis.release_seat_locks(str(booking["trip_id"]), booking["seat_layout"])
         
         # 🎯 CLEANUP: Unlink user because their booking failed
-        await self.user_repo.set_active_trip(str(booking["passenger_id"]), None)
+        passenger_id = booking.get("passenger_id")
+        if passenger_id and passenger_id != "None":
+            await self.user_repo.set_active_trip(str(passenger_id), None)
         
         await self.booking_repo.cancel_booking(booking_id)
         return {"status": "success", "message": "Seat released."}
 
     async def search_trips(self, origin: str, destination: str, date_str: str = None):
-        """
-        Professional Search Logic: 
-        1. Validation 2. Strict Search 3. Fallback Search 4. Weighted Ranking
-        """
-    
-    # --- 4. DATA STRICTNESS (Server-Side Validation) ---
         if not origin or not destination:
-         raise HTTPException(status_code=400, detail="Origin and Destination required.")
+            raise HTTPException(status_code=400, detail="Origin and Destination required.")
 
-    # Prevent searching for past dates
         today_date = datetime.now().strftime("%Y-%m-%d")
         if date_str and date_str < today_date:
             raise HTTPException(status_code=400, detail="Cannot search for rides in the past.")
 
-    # --- 2. HANDLING "NO RESULTS" (Strict vs. Flexible) ---
-    # First, try the strict search (Exact Date)
         trips = await self.trip_repo.find_trips(origin, destination, date_str)
     
         is_fallback = False
         if not trips:
-        # If no rides today, search for any rides starting from tomorrow onwards
-        # We limit this to ensure we don't pull 1000s of future rides at once
+            # Requires find_upcoming_trips implementation in trip_repo
             trips = await self.trip_repo.find_upcoming_trips(origin, destination, date_str, limit=20)
             is_fallback = True
 
-    # --- 1. THE RANKING BASIS (Sorting Logic) ---
-    # We apply a multi-level sort (Weighted Scoring)
-    # Priority: Date (Asc) -> Driver Rating (Desc) -> Price (Asc)
-    
-        # --- 1. THE RANKING BASIS (Sorting Logic) ---
         def get_ranking_score(trip):
-            # 🎯 FIX: Check for rating_avg (new) or driver_rating (old)
-            # Default to 0 if no rating exists
             rating = trip.get("rating_avg") or trip.get("driver_rating") or 0
-            
             return (
                 trip.get("date"), 
-                -float(rating), # Higher rating = lower number for sorting
+                -float(rating),
                 trip.get("price", 0)
             )
 
         trips.sort(key=get_ranking_score)
 
-    # --- 3. INFINITE SCROLL / UI HELPERS ---
-    # We tag the trips so the Frontend knows if these are "Exact Matches" 
-    # or "Suggested Future Rides" to show a Date Divider.
         for trip in trips:
+            trip["id"] = str(trip.get("_id", trip.get("id"))) # Guarantee string conversion
             trip["is_exact_match"] = not is_fallback
-        # This helps the frontend render the "Suggested for Tomorrow" header
             if is_fallback:
                 trip["ui_label"] = "Suggested Future Ride"
 
         return trips
+
     async def get_passenger_ride_history(self, passenger_id: str):
-        """
-        Fetches and formats history with clear financial breakdown.
-        """
-    # 1. Get raw bookings from repo (already enriched with trip data via lookup)
         bookings = await self.booking_repo.get_passenger_history(passenger_id)
     
         enriched_history = []
         for b in bookings:
-        # 🎯 FINANCIAL BREAKDOWN
-        # total_price = Base + Surcharge
-        # amount_paid = 20% Advance
             total = float(b.get("total_price", 0))
             advance = float(b.get("amount_paid", 0))
         
             ride_entry = {
-                "id": str(b["_id"]),
+                "id": str(b.get("_id", b.get("id"))),
                 "origin": b.get("origin", "Unknown"),
                 "destination": b.get("destination", "Unknown"),
                 "total_price": total,
                 "advance_paid": advance,
-                "remaining_balance": total - advance, # 💰 Cash to be paid to driver
+                "remaining_balance": total - advance,
                 "status": b.get("status", "completed"),
                 "created_at": b.get("created_at"),
                 "rating": b.get("rating"), 
@@ -361,40 +322,29 @@ class TripService:
             return {"status": "success", "message": "Payout rejected."}
 
         raise HTTPException(status_code=400, detail="Invalid action")
+
 class RatingService:
     def __init__(self, booking_repo, user_repo):
         self.booking_repo = booking_repo
         self.user_repo = user_repo
         
     async def get_popup_data(self, user_id: str):
-        """Checks if a user is due for a one-time rating popup."""
-        
-        # 🎯 This single call now finds the booking AND flips the flag automatically!
         booking = await self.booking_repo.get_unrated_booking_for_popup(user_id)
-        
-        if not booking:
-            return None
-        
-        # (We removed the 'update_prompt_status' call from here because the repo already did it)
+        if not booking: return None
         
         return {
-            "booking_id": booking["id"],
+            "booking_id": str(booking.get("id")),
             "driver_name": booking.get("final_driver_name", "Driver"),
             "driver_id": str(booking.get("driver_id", ""))
         }
 
     async def add_rating(self, booking_id: str, rating: int, review: str):
-        """Saves the rating and updates the driver's global average."""
-        # 1. Save the individual review
         await self.booking_repo.save_rating_results(booking_id, rating, review)
 
-        # 2. Find the Driver to update their reputation
         booking = await self.booking_repo.get_by_id(booking_id)
         driver_id = booking.get("driver_id")
         
         if driver_id:
-            # 3. Calculate New Average
-            # Get all ratings for this driver from the bookings collection
             all_ratings = await self.booking_repo.get_all_ratings_for_driver(driver_id)
             
             if all_ratings:
@@ -402,7 +352,4 @@ class RatingService:
                 count = len([r for r in all_ratings if r.get('rating')])
                 new_avg = total_stars / count if count > 0 else 0
                 
-                # 4. Push the new average to the Driver's Profile
                 await self.user_repo.update_driver_average_rating(driver_id, new_avg, count)
-                
-    

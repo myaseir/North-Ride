@@ -17,12 +17,13 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 def generate_otp(length: int = 6) -> str:
+    # 'secrets' module is cryptographically secure, perfect for OTPs
     return "".join(secrets.choice(string.digits) for _ in range(length))
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """
     Creates a JWT token. 
-    'data' now includes 'sub' (user_id) and 'roles' (list of strings).
+    'data' includes 'sub' (user_id) and 'roles' (list of strings).
     """
     to_encode = data.copy()
     
@@ -65,8 +66,10 @@ def create_refresh_token(user_id: str) -> str:
     """
     Optional: Create a longer-lived token for 'Remember Me' functionality.
     """
-    expires = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    # 🎯 THE FIX: Pass a timedelta directly, not a calculated datetime.
+    delta = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    
     return create_access_token(
         data={"sub": user_id, "type": "refresh"}, 
-        expires_delta=expires
+        expires_delta=delta
     )

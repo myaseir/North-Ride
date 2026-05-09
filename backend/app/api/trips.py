@@ -52,6 +52,7 @@ async def publish_trip(data: TripCreate, current_user: dict = Depends(get_curren
         dt = trip_dict["departure_time"]
         # Use strftime if Pydantic already converted it to a datetime object
         trip_dict["date"] = dt.split('T')[0] if isinstance(dt, str) else dt.strftime('%Y-%m-%d')
+    
     trip_dict["status"] = "scheduled"
     trip_dict["available_seats"] = trip_dict.get("total_seats", 4)
     trip_dict["created_at"] = datetime.now(timezone.utc)
@@ -59,8 +60,9 @@ async def publish_trip(data: TripCreate, current_user: dict = Depends(get_curren
     # Call the service
     new_id = await trip_service.create_new_trip(trip_dict)
     
-    # 🎯 THE FIX: Convert the ObjectId to a String before returning
-    # This stops the "ObjectId is not iterable" error
+    # 🎯 THE FIX: The Repo mutated trip_dict and turned driver_id into an ObjectId.
+    # We MUST cast it back to a string before FastAPI attempts to return it!
+    trip_dict["driver_id"] = str(trip_dict.get("driver_id", ""))
     trip_dict["id"] = str(new_id) 
     
     # Remove the raw MongoDB _id if it exists to avoid encoder confusion
@@ -257,25 +259,27 @@ async def get_unified_history(
     # 1. Fetch Driver History
     if "DRIVER" in roles:
         driver_trips = await trip_service.trip_repo.get_history(user_id)
-        for t in driver_trips:
-            t["history_type"] = "driver"
-            # 🔥 CRITICAL: Convert _id to string if not already done
-            if "_id" in t:
-                t["id"] = str(t["_id"])
-                t["_id"] = t["id"]
-        combined_history.extend(driver_trips)
+        if driver_trips:  # 🎯 Add Safety Check
+            for t in driver_trips:
+                t["history_type"] = "driver"
+                # 🔥 CRITICAL: Convert _id to string if not already done
+                if "_id" in t:
+                    t["id"] = str(t["_id"])
+                    t["_id"] = t["id"]
+            combined_history.extend(driver_trips)
 
     # 2. Fetch Passenger History (This uses your $lookup enrichment)
     passenger_bookings = await booking_repo.get_passenger_history(user_id)
-    for b in passenger_bookings:
-        b["history_type"] = "passenger"
-        # 🔥 CRITICAL: Convert all potential ObjectIds
-        if "_id" in b:
-            b["id"] = str(b["_id"])
-            b["_id"] = b["id"]
-        if "trip_id" in b:
-            b["trip_id"] = str(b["trip_id"])
-    combined_history.extend(passenger_bookings)
+    if passenger_bookings: # 🎯 Add Safety Check to prevent TypeError
+        for b in passenger_bookings:
+            b["history_type"] = "passenger"
+            # 🔥 CRITICAL: Convert all potential ObjectIds
+            if "_id" in b:
+                b["id"] = str(b["_id"])
+                b["_id"] = b["id"]
+            if "trip_id" in b:
+                b["trip_id"] = str(b["trip_id"])
+        combined_history.extend(passenger_bookings)
 
     # 3. Sort by date (Newest First)
     combined_history.sort(key=lambda x: x.get("created_at", ""), reverse=True)

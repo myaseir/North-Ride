@@ -1,12 +1,10 @@
 from fastapi import APIRouter, Depends
 from app.core.deps import get_current_user
-from typing import Any
-import json
 from bson import ObjectId
 
 router = APIRouter()
 
-def serialize_mongo(data: Any) -> Any:
+def serialize_mongo(data):
     """Helper to recursively convert MongoDB ObjectIds to strings."""
     if isinstance(data, list):
         return [serialize_mongo(item) for item in data]
@@ -17,23 +15,16 @@ def serialize_mongo(data: Any) -> Any:
     return data
 
 @router.get("/me")
-async def get_me(current_user: Any = Depends(get_current_user)):
-    # 1. Force the object into a dictionary if it isn't one
-    if hasattr(current_user, "to_dict"):
-        user_data = current_user.to_dict()
-    elif hasattr(current_user, "__dict__"):
-        user_data = vars(current_user)
-    else:
-        user_data = current_user
+async def get_me(current_user: dict = Depends(get_current_user)):
+    # 1. Use the recursive helper to wipe out all deeply nested ObjectIds
+    # (e.g., inside driver_profile.vehicle or active_trip_id)
+    clean_user = serialize_mongo(current_user)
 
-    # 2. Use the recursive helper to wipe out all ObjectIds
-    clean_user = serialize_mongo(user_data)
-
-    # 3. Final polish for the frontend
+    # 2. Final polish for the frontend
     if "id" not in clean_user and "_id" in clean_user:
         clean_user["id"] = clean_user["_id"]
     
-    # 4. Remove sensitive data
+    # 3. Remove sensitive and redundant data
     clean_user.pop("_id", None)
     clean_user.pop("password", None)
     clean_user.pop("password_hash", None)

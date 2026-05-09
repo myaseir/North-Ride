@@ -39,9 +39,9 @@ class TripRepository:
         Saves a trip. Fixes the 7-hour timezone shift by prioritizing 
         the local time string sent from the frontend.
         """
-        # 1. Normalize IDs and Strings
+        # 1. 🎯 FIX: Store driver_id strictly as an ObjectId to maintain database integrity
         if "driver_id" in trip_data:
-            trip_data["driver_id"] = str(trip_data["driver_id"])
+            trip_data["driver_id"] = self._to_id(trip_data["driver_id"])
         
         trip_data["origin"] = trip_data.get("origin", "").strip().lower()
         trip_data["destination"] = trip_data.get("destination", "").strip().lower()
@@ -52,7 +52,6 @@ class TripRepository:
             
             # Convert ISO string to datetime object
             if isinstance(dt, str):
-                # .replace('Z', ...) handles the UTC indicator safely
                 dt_obj = datetime.fromisoformat(dt.replace('Z', '+00:00'))
             else:
                 dt_obj = dt
@@ -61,16 +60,8 @@ class TripRepository:
             if "date" not in trip_data or not trip_data["date"]:
                 trip_data["date"] = dt_obj.strftime('%Y-%m-%d')
             
-            # 2. 🎯 PRESERVE TIME: This is the critical fix for the 7hr shift.
-            # If the frontend sent a clean 'time' string (e.g. "11:05"), we KEEP it.
-            # We only calculate it from the UTC object if the string is missing.
+            # 2. PRESERVE TIME: Keep frontend time if provided, else format from object
             if "time" not in trip_data or not trip_data["time"]:
-                # If we are here, 'time' was missing in the payload. 
-                # If your app is for Pakistan, you can force a +5 hour shift here:
-                # pkt_time = dt_obj + timedelta(hours=5)
-                # trip_data["time"] = pkt_time.strftime('%H:%M')
-                
-                # Default: Use the hour/min from the object
                 trip_data["time"] = dt_obj.strftime('%H:%M')
             
             # Ensure the database stores the object for proper sorting
@@ -137,7 +128,7 @@ class TripRepository:
     async def get_history(self, driver_id: str) -> list[dict]:
         """Fetches past trips for history logs."""
         query = {
-            "driver_id": str(driver_id),
+            "driver_id": self._to_id(driver_id), # 🎯 FIX: Query strictly as ObjectId
             "status": {"$in": ["completed", "cancelled"]}
         }
         cursor = self.collection.find(query).sort("created_at", -1)
@@ -162,16 +153,13 @@ class TripRepository:
         pipeline = [
             {"$match": match_query},
             {
+                # 🎯 SERVERLESS OPTIMIZATION: Because we store driver_id as an ObjectId now,
+                # we can drop the heavy $expr/$toObjectId pipeline and do a standard native lookup.
+                # This executes significantly faster on Atlas.
                 "$lookup": {
                     "from": "users",
-                    "let": { "d_id": "$driver_id" },
-                    "pipeline": [
-                        {
-                            "$match": {
-                                "$expr": { "$eq": ["$_id", { "$toObjectId": "$$d_id" }] }
-                            }
-                        }
-                    ],
+                    "localField": "driver_id",
+                    "foreignField": "_id",
                     "as": "driver_info"
                 }
             },

@@ -25,25 +25,31 @@ db = MongoDB()
 
 async def connect_to_mongo():
     try:
-        # The actual class is used here during runtime, where it won't cause type errors
+        # 🎯 SERVERLESS OPTIMIZATIONS APPLIED HERE
         db.client = AsyncIOMotorClient(
             settings.MONGO_URL,
-            maxPoolSize=100, 
-            minPoolSize=10,
-            retryWrites=True
+            maxPoolSize=50,       # Cap connections to stay within Atlas free tier limits
+            minPoolSize=0,        # Crucial for Vercel: Do not keep idle connections open
+            retryWrites=True,
+            connectTimeoutMS=5000 # Fail fast if network is degraded
         )
         db._db = db.client[settings.DATABASE_NAME]
         
         # --- INITIALIZE INDEXES ---
-        # This prevents a driver from creating two 'scheduled' rides
+        # 1. Driver constraint: prevents a driver from creating two 'scheduled' rides
         await db.db["trips"].create_index(
             [("driver_id", 1), ("status", 1)],
             unique=True,
             partialFilterExpression={"status": "scheduled"}
         )
         
+        # 2. 🎯 Search optimization: makes NorthRide route finding instant
+        await db.db["trips"].create_index(
+            [("origin", 1), ("destination", 1), ("status", 1)]
+        )
+        
         await db.client.admin.command('ping')
-        logger.info(f"✅ MongoDB Connected & Indexes Initialized: {settings.DATABASE_NAME}")
+        logger.info(f"✅ MongoDB Connected & Serverless Indexes Initialized: {settings.DATABASE_NAME}")
         
     except Exception as e:
         logger.error(f"❌ MongoDB Connection Failed: {e}")
@@ -51,22 +57,9 @@ async def connect_to_mongo():
 
 async def close_mongo_connection():
     try:
-        db.client = AsyncIOMotorClient(settings.MONGO_URL, ...)
-        db._db = db.client[settings.DATABASE_NAME]
-        
-        # --- INITIALIZE INDEXES ---
-        try:
-            await db.db["trips"].create_index(
-                [("driver_id", 1), ("status", 1)],
-                unique=True,
-                partialFilterExpression={"status": "scheduled"}
-            )
-        except Exception as index_err:
-            logger.warning(f"⚠️ Could not create unique index (likely duplicate data exists): {index_err}")
-        
-        await db.client.admin.command('ping')
-        logger.info(f"✅ MongoDB Connected: {settings.DATABASE_NAME}")
-        
+        # 🎯 THE FIX: Actually close the connection to prevent Zombie connections on Vercel
+        if db.client:
+            db.client.close()
+            logger.info("👋 MongoDB Connection Cleanly Closed.")
     except Exception as e:
-        logger.error(f"❌ MongoDB Connection Failed: {e}")
-        raise e
+        logger.error(f"❌ Error during MongoDB shutdown: {e}")

@@ -22,7 +22,7 @@ class UserRepository:
         """Helper to convert ObjectId to string for JSON compatibility."""
         if doc and "_id" in doc:
             doc["id"] = str(doc["_id"])
-            # Optional: del doc["_id"] if you want a clean JSON response
+            doc["_id"] = doc["id"] # Guarantee consistency for Pydantic
         return doc
 
     @property
@@ -47,14 +47,16 @@ class UserRepository:
         except Exception as e:
             logger.error(f"❌ Error fetching user by email: {e}")
             return None
+            
     async def get_by_id(self, user_id: str):
         doc = await self.collection.find_one({"_id": self._to_id(user_id)})
         return self._serialize_doc(doc)
 
+    # 🎯 MERGED: get_pending_drivers (Kept serialization and strict filtering)
     async def get_pending_drivers(self, limit: int = 50) -> List[dict]:
         """
         Review Queue: Fetches drivers waiting for approval.
-        Added serialization to prevent 'Empty Object' frontend errors.
+        Uses serialization to prevent 'Empty Object' frontend errors.
         """
         cursor = self.collection.find({
             "roles": "DRIVER",
@@ -65,7 +67,9 @@ class UserRepository:
         docs = await cursor.to_list(length=limit)
         return [self._serialize_doc(d) for d in docs]
 
+    # 🎯 MERGED: admin_verify_driver (Kept the detailed driver_profile updates)
     async def admin_verify_driver(self, user_id: str, status: bool) -> bool:
+        """Admin approval logic."""
         oid = self._to_id(user_id)
         if not oid: return False
 
@@ -75,64 +79,7 @@ class UserRepository:
                 "$set": {
                     "is_approved": True,
                     "is_verified": True,
-                    "driver_profile.is_verified": True, # Match your route logic
-                    "driver_profile.approved_at": datetime.now(timezone.utc)
-                }
-            }
-        else:
-            # Rejected
-            update_query = {
-                "$set": {
-                    "is_approved": False, # Keep false so they don't show in 'Approved' lists
-                    "is_driver": False,
-                    "driver_profile.is_verified": False
-                },
-                "$pull": {"roles": "DRIVER"} # Remove role so they vanish from 'Pending' list
-            }
-
-        result = await self.collection.update_one({"_id": oid}, update_query)
-        return result.modified_count > 0
-
-    
-    
-    async def update_wallet(self, user_id: str, amount: Any) -> bool:
-        """Atomic wallet increment with strict type casting."""
-        try:
-        # Convert to float and round to 2 decimals to avoid floating point math errors
-            clean_amount = round(float(amount), 2)
-        
-            result = await self.collection.update_one(
-            {"_id": self._to_id(user_id)},
-            {"$inc": {"wallet_balance": clean_amount}} # Ensure field name matches DB
-            )
-            return result.modified_count > 0
-        except (ValueError, TypeError) as e:
-            logger.error(f"❌ Wallet Update Failed: Invalid amount {amount} - {e}")
-            return False
-
-    async def get_pending_drivers(self, limit: int = 50) -> List[dict]:
-        cursor = self.collection.find({
-        "roles": "DRIVER",
-        "is_approved": False
-        }).sort("created_at", 1)
-    
-    # You MUST await the conversion to a list
-        drivers = await cursor.to_list(length=limit)
-        return drivers if drivers else []
-
-    async def admin_verify_driver(self, user_id: str, status: bool):
-        """
-        Step 6: Admin approval logic.
-        """
-        oid = self._to_id(user_id)
-        if not oid: return False
-
-        if status:
-            # Approved
-            update_query = {
-                "$set": {
-                    "is_approved": True,
-                    "is_verified": True,
+                    "driver_profile.is_verified": True, 
                     "driver_profile.approved_at": datetime.now(timezone.utc)
                 }
             }
@@ -140,25 +87,34 @@ class UserRepository:
             # Rejected: Strip driver capabilities but keep the user record
             update_query = {
                 "$set": {
-                    "is_approved": False,
-                    "is_driver": False
+                    "is_approved": False, 
+                    "is_driver": False,
+                    "driver_profile.is_verified": False
                 },
-                "$pull": {"roles": "DRIVER"}
+                "$pull": {"roles": "DRIVER"} # Remove role so they vanish from pending lists
             }
 
         result = await self.collection.update_one({"_id": oid}, update_query)
         return result.modified_count > 0
 
-    async def update_wallet(self, user_id: str, amount: float) -> bool:
-        """Atomic wallet increment/decrement."""
-        result = await self.collection.update_one(
-            {"_id": self._to_id(user_id)},
-            {"$inc": {"wallet_balance": round(amount, 2)}}
-        )
-        return result.modified_count > 0
+    # 🎯 MERGED: update_wallet (Kept the safe float casting and error handling)
+    async def update_wallet(self, user_id: str, amount: Any) -> bool:
+        """Atomic wallet increment with strict type casting."""
+        try:
+            # Convert to float and round to 2 decimals to avoid floating point math errors
+            clean_amount = round(float(amount), 2)
+            
+            result = await self.collection.update_one(
+                {"_id": self._to_id(user_id)},
+                {"$inc": {"wallet_balance": clean_amount}} 
+            )
+            return result.modified_count > 0
+        except (ValueError, TypeError) as e:
+            logger.error(f"❌ Wallet Update Failed: Invalid amount {amount} - {e}")
+            return False
 
     async def set_active_trip(self, user_id: str, trip_id: Optional[str]):
-        """Locks/Unlocks a driver's status."""
+        """Locks/Unlocks a driver or passenger's status."""
         target_id = self._to_id(trip_id) if trip_id else None
         return await self.collection.update_one(
             {"_id": self._to_id(user_id)},
@@ -167,7 +123,6 @@ class UserRepository:
         
     async def update_driver_average_rating(self, driver_id: str, new_avg: float, count: int):
         """Updates the driver's public profile with their latest rating stats."""
-        # Because we are in UserRepository, self.collection correctly points to db.db.users!
         await self.collection.update_one(
             {"_id": self._to_id(driver_id)},
             {"$set": {
