@@ -272,7 +272,7 @@ console.log("🕵️‍♂️ MY FULL USER OBJECT:", user);
             {isSearching && (
               <section className="space-y-4">
                 <div className="flex justify-between items-center px-2">
-                   <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Radar Results</h3>
+                   <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]"> Results</h3>
                    <button onClick={() => setIsSearching(false)} className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">Clear</button>
                 </div>
                 {loading ? (
@@ -331,7 +331,7 @@ console.log("🕵️‍♂️ MY FULL USER OBJECT:", user);
         <div className="lg:col-span-8 space-y-6">
           <div className="flex items-center justify-between px-2 border-b border-slate-200 pb-4">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
-              {isSearching ? 'Active Radar Results' : 'Recent Rides'}
+              {isSearching ? 'Active Results' : 'Recent Rides'}
             </h3>
             {isSearching && (
               <button onClick={() => setIsSearching(false)} className="text-[9px] font-black uppercase text-emerald-600 hover:text-emerald-700 tracking-widest bg-emerald-50 px-3 py-1.5 rounded-xl">Back to Feed</button>

@@ -154,7 +154,7 @@ const seatStatuses = useMemo(() => {
         
         <div className="flex justify-between items-center w-full mb-6 px-2">
           <div>
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900">Cabin Selection</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900">Seat Selection</h3>
             <div className="flex items-center gap-1.5 mt-1">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Tap to reserve</p>

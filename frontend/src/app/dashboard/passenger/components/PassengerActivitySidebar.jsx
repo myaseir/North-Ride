@@ -15,30 +15,37 @@ const PassengerPaymentSidebar = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     if (isOpen) {
-      const fetchPaymentLedger = async () => {
-        setLoading(true);
-        setError(null);
-        const token = localStorage.getItem("token");
-        
-        try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/passengers/payments`, {
+      // Inside PassengerPaymentSidebar.jsx
+const fetchPaymentLedger = async () => {
+    setLoading(true);
+    setError(null);
+    const token = localStorage.getItem("token");
+    
+    try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/passengers/payments`, {
             method: 'GET',
             headers: { 
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
-          });
+        });
 
-          if (!res.ok) throw new Error("Sync Failed");
+        const data = await res.json();
 
-          const data = await res.json();
-          setPayments(Array.isArray(data) ? data : []);
-        } catch (err) {
-          setError("Connection to financial server interrupted.");
-        } finally {
-          setLoading(false);
+        if (!res.ok) {
+            // 🎯 Extract the string detail to prevent React "Object" crash
+            const msg = data.detail || "Unable to sync ledger";
+            throw new Error(typeof msg === 'object' ? "Financial Sync Error" : msg);
         }
-      };
+
+        setPayments(Array.isArray(data) ? data : []);
+    } catch (err) {
+        // ✅ This will now show the actual error message
+        setError(err.message); 
+    } finally {
+        setLoading(false);
+    }
+};
 
       fetchPaymentLedger();
     }
@@ -159,9 +166,10 @@ const PassengerPaymentSidebar = ({ isOpen, onClose }) => {
                     <div className="space-y-1">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount Disbursed</p>
                       <h3 className="text-2xl font-black text-slate-900 tracking-tighter italic">
-                        <span className="text-xs mr-1 not-italic opacity-40">PKR</span>
-                        {Number(pay.amount || 0).toLocaleString()}
-                      </h3>
+  <span className="text-xs mr-1 not-italic opacity-40">PKR</span>
+  {/* Check for amount_paid (the 20% deposit) or fallback to total_price */}
+  {Number(pay.amount_paid || pay.amount || 0).toLocaleString()}
+</h3>
                     </div>
                     
                     {/* Glass Status Badge */}
@@ -212,7 +220,7 @@ const PassengerPaymentSidebar = ({ isOpen, onClose }) => {
             onClick={onClose}
             className="w-full h-16 bg-slate-900 text-white rounded-3xl flex items-center justify-center gap-3 group hover:bg-emerald-600 transition-all duration-300 active:scale-95 shadow-xl shadow-slate-200"
           >
-            <span className="text-xs font-black uppercase tracking-[0.3em]">Exit Archive</span>
+            <span className="text-xs font-black uppercase tracking-[0.3em]">Go Back</span>
             <ArrowRightLeft size={16} className="text-emerald-400 group-hover:text-white transition-colors" />
           </button>
         </div>

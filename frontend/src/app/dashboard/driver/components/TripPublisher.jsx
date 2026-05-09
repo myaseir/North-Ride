@@ -71,7 +71,7 @@ export default function TripPublisher({ onPublish, loading }) {
         departure_time: new Date(`${formData.date}T${formData.time}`).toISOString(),
         price: Number(formData.price),
         total_seats: 4,
-        car_details: "Toyota Corolla - GlaciaGo F1"
+        car_details: "Toyota Corolla - North Ride F1"
       };
       onPublish(payload);
     }

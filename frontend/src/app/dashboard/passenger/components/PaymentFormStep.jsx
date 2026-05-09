@@ -28,7 +28,7 @@ export default function PaymentFormStep({ finalPrice, initialData, onBack, onSub
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    toast.success("GlaciaGo Account Copied", {
+    toast.success("North Ride Account Copied", {
         style: { borderRadius: '10px', background: '#064e3b', color: '#fff', fontSize: '12px' }
     });
   };

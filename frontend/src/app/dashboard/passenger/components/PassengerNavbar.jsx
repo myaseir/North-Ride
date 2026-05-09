@@ -154,7 +154,7 @@ export default function PassengerNavbar({ onOpenHistory, activeTab }) {
                       onClick={handleLogout} 
                       className="w-full flex items-center gap-3 p-4 text-rose-500 hover:bg-rose-50 rounded-[1.2rem] transition-all font-black uppercase text-[10px] tracking-widest"
                     >
-                      <LogOut size={16} /> Termination Session
+                      <LogOut size={16} /> Logout
                     </button>
                   </div>
                 </div>
@@ -223,7 +223,7 @@ export default function PassengerNavbar({ onOpenHistory, activeTab }) {
             </nav>
 
             <button onClick={handleLogout} className="mt-auto w-full p-5 bg-rose-50 text-rose-600 rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-3">
-              <LogOut size={18} /> End Session
+              <LogOut size={18} /> Logout
             </button>
           </div>
         </div>

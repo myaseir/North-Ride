@@ -317,7 +317,7 @@ export default function ActiveTripStatus({ trip, currentUserEmail, currentUserId
                      {/* Seat Details */}
                      <div className="flex flex-col">
                        <span className="text-[11px] font-black text-slate-800 uppercase flex items-center gap-1">
-                         {seat.isPremium ? 'Premium Forward' : 'Standard Back'}
+                         {seat.isPremium ? 'Premium Forward' : 'Back Seat'}
                          {seat.isPremium && <Star size={10} className="text-amber-500 fill-amber-500" />}
                        </span>
                        <span className={`text-[9px] font-bold capitalize flex items-center gap-1 ${
@@ -379,7 +379,7 @@ export default function ActiveTripStatus({ trip, currentUserEmail, currentUserId
           {/* Right: What they NEED to pay the driver */}
           <div className="text-right flex flex-col items-end">
             <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest">Pay Captain</span>
+              <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest">Pay Driver</span>
               <Banknote size={12} className="text-amber-500" />
             </div>
             <p className="text-xl font-black text-slate-950 leading-none italic tracking-tighter">
@@ -445,7 +445,7 @@ export default function ActiveTripStatus({ trip, currentUserEmail, currentUserId
 
       {/* FOOTER HINT */}
       <p className="text-center text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] pb-4 mt-4">
-        GlaciaGo Premium Carpooling • 2026
+       North Ride · Premium Travel Collective © 2026
       </p>
     </div>
   );
