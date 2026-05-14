@@ -65,7 +65,8 @@ class TripService:
             raise HTTPException(status_code=404, detail="Trip not found")
 
         # 3. ATTEMPT LOCK (Move this as high as possible)
-        lock_acquired = await self.redis.acquire_seat_locks(t_id, seat_layout)
+        # 🎯 Pass user_id as the third argument
+        lock_acquired = await self.redis.acquire_seat_locks(trip_id, seat_layout, user_id)
 
         if not lock_acquired:
             # 🎯 VERCEL FIX: Check if the existing lock belongs to THIS user
