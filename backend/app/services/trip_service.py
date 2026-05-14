@@ -55,7 +55,7 @@ class TripService:
                         sender_name: str, trip_id: str, transaction_id: str, 
                         seat_layout: list[str], account_number: str, amount_paid: float):
         
-        # 1. Standardize IDs to strings (Crucial for Vercel/MongoDB ObjectId mismatch)
+        # 1. Standardize IDs to strings (Crucial for Vercel)
         t_id = str(trip_id)
         u_id = str(user_id)
 
@@ -64,24 +64,53 @@ class TripService:
         if not trip:
             raise HTTPException(status_code=404, detail="Trip not found")
 
-        # 🎯 FIX: Use Keyword Arguments (user_id=u_id) to be 100% explicit for Vercel
-        lock_acquired = await self.redis.acquire_seat_locks(
-            trip_id=t_id, 
-            seats=seat_layout, 
-            user_id=u_id
-        )
+        # Pass user_id as the third argument so Redis knows who owns the lock
+        lock_acquired = await self.redis.acquire_seat_locks(trip_id, seat_layout, user_id)
 
         if not lock_acquired:
-            # 🎯 VERCEL FIX: Check ownership
-            # We use redis_client directly to ensure we get the raw value
-            holder = await self.redis.client.get(f"lock:trip:{t_id}:seat:{seat_layout[0]}")
-            
-            # If the holder is NOT the current user, block them
-            if str(holder) != u_id:
+            # 🎯 VERCEL FIX: Check if the existing lock belongs to THIS user
+            # If they refreshed the page, don't lock them out of their own hold.
+            is_mine = await self.redis.client.get(f"lock:trip:{t_id}:seat:{seat_layout[0]}")
+            if is_mine != u_id:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT, 
                     detail="Seats are currently on hold by another user."
-                ) 
+                )
+
+        try:
+            # 4. FINAL DB VERIFICATION (The Safety Net)
+            # Re-check the trip data to ensure seats weren't taken while we were locking
+            fresh_trip = await self.trip_repo.get_by_id(t_id)
+            booked_seats = fresh_trip.get("booked_seats", [])
+            if any(seat in booked_seats for seat in seat_layout):
+                 raise HTTPException(status_code=400, detail="One or more seats were just taken.")
+
+            # 5. Create the Booking
+            booking_id = await self.booking_repo.create_pending(
+                user_id=u_id,
+                passenger_name=passenger_name,
+                passenger_phone=passenger_phone,
+                sender_name=sender_name,
+                trip_id=t_id,
+                amount=amount_paid,      
+                trx_id=transaction_id,
+                seat_layout=seat_layout,
+                account_number=account_number 
+            )
+
+            if booking_id == "SEATS_TAKEN":
+                await self.redis.release_seat_locks(t_id, seat_layout)
+                raise HTTPException(status_code=400, detail="Seats are already booked.")
+
+            await self.user_repo.set_active_trip(u_id, t_id)
+            return booking_id
+
+        except Exception as e:
+            await self.redis.release_seat_locks(t_id, seat_layout)
+            if isinstance(e, HTTPException): raise e
+            logger.error(f"Booking Error: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to process booking.")
+    
     async def get_driver_manifest(self, trip_id: str, driver_id: str):
         trip = await self.trip_repo.get_by_id(trip_id)
         if not trip:
