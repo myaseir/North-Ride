@@ -208,14 +208,13 @@ async def get_trip_manifest(trip_id: str, current_user: Optional[dict] = Depends
 @router.post("/book")
 async def book_trip(payload: BookingCreate, current_user: dict = Depends(get_current_user)):
     try:
-        # 🎯 Derived from the Account (Automatic ID verification)
         passenger_name = current_user.get("full_name") or current_user.get("username")
         passenger_phone = current_user.get("phone") or current_user.get("phone_number")
 
-        # 🎯 LOGGING: It's good practice to log the incoming amount 
-        # so you can debug if the +2500 was included by the frontend
         logger.info(f"Processing booking for {passenger_name}. Amount Received: {payload.amount_paid}")
 
+        # 🎯 FIX: Use explicit keyword arguments for EVERYTHING
+        # This prevents the "missing 1 required positional argument" error on Vercel
         booking_id = await trip_service.book_seat(
             user_id=str(current_user["_id"]),
             passenger_name=passenger_name, 
@@ -225,21 +224,17 @@ async def book_trip(payload: BookingCreate, current_user: dict = Depends(get_cur
             transaction_id=payload.transactionId,
             seat_layout=payload.seat_layout,
             account_number=payload.account_number, 
-            # 🎯 This payload.amount_paid should be the 100% total 
-            # (Base + 2500 if applicable) calculated by your frontend.
             amount_paid=payload.amount_paid        
         )
-
-        if booking_id == "SEATS_TAKEN":
-            raise HTTPException(status_code=400, detail="One or more selected seats are already booked.")
 
         return {"status": "success", "booking_id": booking_id}
 
     except HTTPException as he:
         raise he
     except Exception as e:
-        logger.error(f"Booking Error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        # 🎯 LOGGING: This will tell you exactly what went wrong in Vercel logs
+        logger.error(f"Booking Route Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 @router.get("/history")
 async def get_unified_history(
