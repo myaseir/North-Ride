@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { X, ArrowRight, Calendar, Star } from 'lucide-react';
+import { X, ArrowRight, Calendar, Star, BookOpen } from 'lucide-react';
 
 export default function BlogPage() {
   const [selectedPost, setSelectedPost] = useState(null);
@@ -16,7 +17,22 @@ export default function BlogPage() {
     } else {
       document.body.style.overflow = 'unset';
     }
+    return () => { document.body.style.overflow = 'unset'; }
   }, [selectedPost]);
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.15 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
+  };
 
   const posts = [
     { 
@@ -25,133 +41,185 @@ export default function BlogPage() {
       date: "Mar 18, 2026", 
       cat: "Route Guide",
       image: "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0A9ifGVxTRb_Clenu4ODOueukHko7d91s9qx5QHArUxTN7v885SqtqdbMvulMRDntz8AmPKuvevnsRJ1oif3Ns7jlKwYDryTguRcVtRfP1vB3OEVEy_wPIAnNHCwSogJA49MAbEYzanI/w1200-h630-p-k-no-nu/k2-mountain-wallpaper-desktop-pictures-for-desktop.jpeg",
-      short: "Skip the crowded bus stations. Learn how to book a clean, private car seat for your trip to Skardu.",
-      content: `The trip from Islamabad to Skardu is a long 20-hour journey. Usually, this means sitting in a crowded bus or arguing with taxi drivers at the station.
+      short: "Skip the crowded buses. Learn how to book a clean, private car for your long trip to Skardu.",
+      content: `The trip from Islamabad to Skardu is a long journey. Usually, this means sitting in a crowded bus or arguing with drivers at the station.
 
-North Ride makes it easy. You can book one seat or a whole car from your phone. 
+North Ride makes it easy. You can book one seat or a whole car right from your phone. 
 
-What we offer:
+Why choose us?
 • Experienced drivers who know the Skardu road well.
-• Fixed prices so you don't have to bargain.
-• Clean cars with AC and heaters.
-• Easy pick-up points near the city center.`
+• Fixed prices so you never have to bargain.
+• Clean cars with air conditioning and heaters.
+• Easy pick-up points near your home.`
     },
     { 
       id: 2,
-      title: "The Best Way to reach Hunza & Gilgit", 
+      title: "How to Reach Hunza & Gilgit", 
       date: "Mar 15, 2026", 
-      cat: "Local Travel",
+      cat: "Travel Tips",
       image: "https://epicexpeditions.co/wp-content/uploads/2022/01/DSCF6400.jpg",
-      short: "If you live in Hunza or Ghizer, North Ride is your safe bridge from Islamabad to Gilgit.",
-      content: `Getting from the Twin Cities to Gilgit is the most important part of your journey home. 
+      short: "The easiest and safest way to travel from the Twin Cities to Gilgit and Hunza.",
+      content: `Getting from Islamabad or Rawalpindi to Gilgit is a very important journey. 
 
-North Ride is the most reliable choice for this route. By booking a seat to Gilgit on our app, you arrive fast and safe. From the Gilgit hub, it is very easy to take a short local ride to reach Hunza, Nagar, or Astore.`
+North Ride is the most reliable choice for this route. When you book a seat with us, you travel fast and stay safe. Once you reach Gilgit, it is very easy to take a short, local ride to Hunza, Nagar, or Astore.`
     },
     { 
       id: 3,
-      title: "Expert Drivers for the Karakoram Highway", 
+      title: "Expert Drivers for the Mountains", 
       date: "Mar 12, 2026", 
-      cat: "Safety",
+      cat: "Safety First",
       image: "https://cdn-blog.zameen.com/blog/wp-content/uploads/2021/10/1440x900-1-1024x640.jpg",
-      short: "Driving in the mountains is a skill. Meet the expert captains who keep you safe on the KKH.",
-      content: `The Karakoram Highway is beautiful, but it needs a driver who knows the road. Unlike other taxi services, North Ride only works with 'Captains' who have years of experience on the mountain roads between Islamabad, Gilgit, and Skardu.`
+      short: "Driving in the mountains is hard. Meet the expert drivers who keep you safe on the road.",
+      content: `The Karakoram Highway is beautiful, but it requires a driver who truly knows the road. 
+
+Unlike regular taxi services, North Ride only works with verified 'Captains'. These drivers have years of experience driving safely on the steep mountain roads between Islamabad, Gilgit, and Skardu. Your safety is always our top priority.`
     },
   ];
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-[100svh] bg-white text-slate-900 selection:bg-emerald-100 overflow-hidden">
       <Navbar />
       
-      <div className="max-w-6xl mx-auto pt-32 md:pt-44 px-6">
-        <div className="max-w-2xl mb-16 text-center md:text-left">
-          <div className="inline-block px-3 py-1 mb-4 text-[10px] font-bold tracking-[0.2em] text-emerald-600 uppercase bg-emerald-50 rounded-full">
-            North Ride Journal
+      {/* --- HERO SECTION --- */}
+      <section className="pt-32 md:pt-40 pb-12 px-6 relative">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-emerald-50/50 rounded-full blur-3xl -z-10" />
+        
+        <motion.div 
+          initial="hidden"
+          animate="show"
+          variants={containerVariants}
+          className="max-w-6xl mx-auto"
+        >
+          <div className="max-w-2xl mb-16 text-center md:text-left mx-auto md:mx-0">
+            <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-4 py-1.5 mb-6 text-[11px] font-bold tracking-widest text-emerald-700 uppercase bg-emerald-50 border border-emerald-100/50 rounded-full">
+              <BookOpen size={14} /> Travel Journal
+            </motion.div>
+            <motion.h1 variants={itemVariants} className="text-4xl md:text-6xl font-bold text-slate-900 tracking-tight leading-[1.1]">
+              Stories from the <br className="hidden md:block" />
+              <span className="text-emerald-500 italic font-serif font-light">North.</span>
+            </motion.h1>
+            <motion.p variants={itemVariants} className="mt-6 text-slate-500 font-medium text-base md:text-lg leading-relaxed">
+              Read our latest travel guides. We connect Skardu, Gilgit, Hunza, and the Twin Cities safely.
+            </motion.p>
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold text-slate-900 tracking-tight leading-tight">
-            Stories from the <span className="text-emerald-500 italic font-medium">North.</span>
-          </h1>
-          <p className="mt-6 text-slate-500 font-light text-base md:text-lg leading-relaxed">
-            Travel updates for Gilgit-Baltistan. Connecting Skardu, Gilgit, and the Twin Cities with pride.
-          </p>
-        </div>
 
-        {/* Blog Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-24">
-          {posts.map((post) => (
-            <div 
-              key={post.id} 
-              className="group cursor-pointer"
-              onClick={() => setSelectedPost(post)}
-            >
-              <div className="aspect-[4/5] rounded-3xl overflow-hidden mb-6 bg-slate-100">
-                <img src={post.image} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-              </div>
-              <div className="text-left space-y-3">
-                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{post.cat}</span>
-                <h3 className="text-xl font-bold text-slate-900 group-hover:text-emerald-500 transition-colors">{post.title}</h3>
-                <p className="text-slate-500 text-sm font-light line-clamp-2 leading-relaxed">{post.short}</p>
-                <div className="pt-4 flex items-center justify-between border-t border-slate-50">
-                  <span className="text-slate-300 text-[10px] font-bold uppercase tracking-widest">{post.date}</span>
-                  <div className="flex items-center gap-2 text-emerald-600 font-bold text-[10px] uppercase tracking-widest">
-                    Read Story <ArrowRight size={14} />
+          {/* --- BLOG GRID --- */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-24">
+            {posts.map((post) => (
+              <motion.div 
+                variants={itemVariants}
+                key={post.id} 
+                className="group cursor-pointer flex flex-col"
+                onClick={() => setSelectedPost(post)}
+              >
+                <div className="aspect-square md:aspect-[4/5] rounded-3xl overflow-hidden mb-6 bg-slate-50 relative">
+                  <img 
+                    src={post.image} 
+                    alt={post.title} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" 
+                  />
+                  <div className="absolute inset-0 bg-slate-900/10 group-hover:bg-transparent transition-colors duration-500" />
+                </div>
+                <div className="text-left flex flex-col flex-1">
+                  <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-widest mb-3">
+                    {post.cat}
+                  </span>
+                  <h3 className="text-xl font-bold text-slate-900 group-hover:text-emerald-600 transition-colors mb-3 leading-snug">
+                    {post.title}
+                  </h3>
+                  <p className="text-slate-500 text-sm font-medium line-clamp-2 leading-relaxed mb-6 flex-1">
+                    {post.short}
+                  </p>
+                  <div className="pt-4 flex items-center justify-between border-t border-slate-100">
+                    <span className="text-slate-400 text-[11px] font-semibold uppercase tracking-widest">
+                      {post.date}
+                    </span>
+                    <div className="flex items-center gap-2 text-emerald-600 font-bold text-[11px] uppercase tracking-widest group-hover:translate-x-1 transition-transform">
+                      Read Story <ArrowRight size={14} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </section>
 
-      {/* --- BLOG MODAL --- */}
-      {selectedPost && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-300">
-          
-          <div className="bg-white w-full max-w-3xl max-h-[90vh] rounded-[2rem] overflow-hidden shadow-2xl relative flex flex-col animate-in zoom-in-95 duration-300">
+      {/* --- BLOG MODAL (Framer Motion) --- */}
+      <AnimatePresence>
+        {selectedPost && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
             
-            {/* Close Button */}
-            <button 
-              onClick={() => setSelectedPost(null)} 
-              className="absolute top-4 right-4 z-[110] p-2 bg-white/80 backdrop-blur-md rounded-full shadow-md hover:bg-emerald-500 hover:text-white transition-all text-slate-900"
+            {/* Dark blur backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedPost(null)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            
+            {/* Modal Box */}
+            <motion.div 
+              initial={{ opacity: 0, y: 50, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-white w-full max-w-3xl max-h-[90vh] md:max-h-[85vh] rounded-[2rem] overflow-hidden shadow-2xl relative flex flex-col z-10"
             >
-              <X size={18} />
-            </button>
+              
+              {/* Close Button */}
+              <button 
+                onClick={() => setSelectedPost(null)} 
+                className="absolute top-4 right-4 z-[110] p-2.5 bg-white/80 backdrop-blur-md rounded-full shadow-sm border border-slate-100 hover:bg-slate-100 transition-all text-slate-700"
+              >
+                <X size={20} />
+              </button>
 
-            <div className="overflow-y-auto">
-              <img src={selectedPost.image} alt="Header" className="w-full h-64 md:h-80 object-cover" />
-              <div className="p-8 md:p-12 text-left">
-                <div className="flex gap-4 mb-6">
-                   <span className="flex items-center gap-1.5 text-slate-400 text-[9px] font-bold uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full">
-                     <Calendar size={12}/> {selectedPost.date}
-                   </span>
-                   <span className="flex items-center gap-1.5 text-emerald-600 text-[9px] font-bold uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full">
-                     <Star size={12}/> Popular
-                   </span>
-                </div>
+              <div className="overflow-y-auto overflow-x-hidden custom-scrollbar">
+                <img 
+                  src={selectedPost.image} 
+                  alt="Header" 
+                  className="w-full h-64 md:h-80 object-cover" 
+                />
                 
-                <h2 className="text-2xl md:text-4xl font-bold text-slate-900 mb-6 tracking-tight leading-tight">{selectedPost.title}</h2>
-                
-                <div className="text-slate-500 text-sm md:text-base font-light leading-relaxed whitespace-pre-line space-y-4">
-                  {selectedPost.content}
-                </div>
-
-                {/* Call to Action inside Modal */}
-                <div className="mt-12 p-8 bg-slate-950 rounded-3xl text-white flex flex-col md:flex-row items-center justify-between gap-6">
-                  <div className="text-center md:text-left">
-                    <h4 className="text-lg font-bold">Ready to travel?</h4>
-                    <p className="text-slate-400 text-xs font-light">Book your next seat in seconds.</p>
+                <div className="p-6 md:p-12 text-left">
+                  <div className="flex flex-wrap gap-3 mb-6">
+                     <span className="flex items-center gap-1.5 text-slate-600 text-[11px] font-bold uppercase tracking-widest bg-slate-100 px-3 py-1.5 rounded-lg">
+                       <Calendar size={14}/> {selectedPost.date}
+                     </span>
+                     <span className="flex items-center gap-1.5 text-emerald-700 text-[11px] font-bold uppercase tracking-widest bg-emerald-50 px-3 py-1.5 rounded-lg">
+                       <Star size={14}/> Popular
+                     </span>
                   </div>
-                  <Link 
-                    href="/login" 
-                    className="bg-emerald-600 text-white px-8 py-4 rounded-xl font-bold text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-500 transition-all shadow-lg"
-                  >
-                    Start Booking
-                  </Link>
+                  
+                  <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-8 tracking-tight leading-tight">
+                    {selectedPost.title}
+                  </h2>
+                  
+                  <div className="text-slate-600 text-base font-medium leading-relaxed whitespace-pre-line space-y-4">
+                    {selectedPost.content}
+                  </div>
+
+                  {/* Clean CTA inside Modal */}
+                  <div className="mt-12 p-8 bg-slate-50 border border-slate-100 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="text-center md:text-left">
+                      <h4 className="text-xl font-bold text-slate-900 mb-1">Ready to travel?</h4>
+                      <p className="text-slate-500 text-sm font-medium">Book your safe, comfortable seat today.</p>
+                    </div>
+                    <Link 
+                      href="/login" 
+                      className="w-full md:w-auto bg-emerald-600 text-white px-8 py-4 rounded-2xl font-semibold text-sm tracking-wide hover:bg-emerald-700 transition-all text-center active:scale-95 shadow-md shadow-emerald-900/10"
+                    >
+                      Book a Ride Now
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
       
       <Footer />
     </main>
