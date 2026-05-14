@@ -101,8 +101,14 @@ class RedisManager:
         """Removes the 'Hold' status so seats can be free or permanently booked."""
         if not seats:
             return
+            
+        # 🎯 SAFETY FIX: Ensure we handle single seats vs lists correctly
+        if isinstance(seats, str):
+            seats = [seats]
+            
         keys = [f"lock:trip:{trip_id}:seat:{seat}" for seat in seats]
         try:
+            # Upstash .delete() can take a list or multiple arguments
             await redis_client.delete(*keys)
         except Exception as e:
             logger.error(f"Redis Release Error: {e}")
