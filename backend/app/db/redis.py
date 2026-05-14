@@ -63,14 +63,17 @@ class RedisManager:
 
     # --- 🔒 ATOMIC LOCKING (NO HEARTBEATS) ---
         
-    async def acquire_seat_locks(self, trip_id: str, seats: list[str], expiry: int = 600) -> bool:
+    # 🎯 FIX: Added user_id to the arguments
+    async def acquire_seat_locks(self, trip_id: str, seats: list[str], user_id: str, expiry: int = 600) -> bool:
         """
         Attempts to lock seats atomically for North Ride.
+        Stores the user_id as the value so the system knows who owns the hold.
         """
         try:
-            # 1. Pre-check: See if any of these seats are already locked
-            # This prevents the "cleanup" logic from firing on existing locks
-            keys = [f"lock:trip:{trip_id}:seat:{seat}" for seat in seats]
+            t_id = str(trip_id)
+            keys = [f"lock:trip:{t_id}:seat:{seat}" for seat in seats]
+            
+            # 1. Pre-check: If any are locked, return False
             existing_locks = await redis_client.exists(*keys)
             if existing_locks > 0:
                 return False
@@ -78,17 +81,15 @@ class RedisManager:
             # 2. Attempt Atomic Lock via Pipeline
             pipe = redis_client.pipeline()
             for seat in seats:
-                lock_key = f"lock:trip:{trip_id}:seat:{seat}"
-                # nx=True is the "Gold Standard" for distributed locking
-                pipe.set(lock_key, "hold", ex=expiry, nx=True)
+                lock_key = f"lock:trip:{t_id}:seat:{seat}"
+                # 🎯 FIX: Store user_id instead of "hold"
+                pipe.set(lock_key, str(user_id), ex=expiry, nx=True)
             
             results = await pipe.exec()
             
             # 3. Validation
-            # Upstash returns "OK" for success and None for failure with nx=True
             if any(r != "OK" and r is not True for r in results):
-                # Only cleanup if we actually created partial locks
-                await self.release_seat_locks(trip_id, seats)
+                await self.release_seat_locks(t_id, seats)
                 return False
             
             return True
