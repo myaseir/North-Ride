@@ -72,7 +72,7 @@ export default function Home() {
             className="text-center lg:text-left space-y-6 md:space-y-8 relative pt-4 lg:pt-8"
           >
             {/* MOBILE MOUNTAIN BACKGROUND (Hidden on Desktop) */}
-            <div className="lg:hidden absolute -top-24 left-1/2 -translate-x-1/2 w-[120%] sm:w-[100%] max-w-[500px] -z-10 pointer-events-none opacity-50 grayscale">
+            <div className="lg:hidden absolute -top-30 left-1/2 -translate-x-1/2 w-[120%] sm:w-[100%] max-w-[500px] -z-10 pointer-events-none opacity-50 grayscale">
               <img 
                 src="https://images.unsplash.com/photo-1554629947-334ff61d85dc?q=80&w=800&auto=format&fit=crop" 
                 alt="Mountains" 
