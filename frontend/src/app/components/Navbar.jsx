@@ -59,7 +59,7 @@ export default function Navbar() {
             <div className="hidden md:flex items-center gap-1">
               <NavLink label="Home" href="/" active={pathname === '/'} />
               <NavLink label="About" href="/about" active={pathname === '/about'} />
-              <NavLink label="How to Play" href="/how-to-use" active={pathname === '/how-to-use'} />
+              <NavLink label="How to Use" href="/how-to-use" active={pathname === '/how-to-use'} />
               <NavLink label="Blog" href="/blog" active={pathname === '/blog'} />
               <NavLink label="Contact" href="/contact" active={pathname === '/contact'} />
             </div>
