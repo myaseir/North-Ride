@@ -166,7 +166,7 @@ class TripRepository:
             {"$unwind": {"path": "$driver_info", "preserveNullAndEmptyArrays": True}},
             {
                 "$addFields": {
-                "listing_driver_name": { "$ifNull": ["$driver_info.full_name", "$driver_info.username", "Verified Driver\n(Driver info unlocked upon confirmation)"] },
+                "listing_driver_name": { "$ifNull": ["$driver_info.full_name", "$driver_info.username", "Driver contact shown once confirmed"] },
                 "rating_avg": { "$ifNull": ["$driver_info.rating_avg", "$driver_info.driver_rating", 5.0] }, # ⭐ Boosted fallback rating to 5.0 for clean UI
                 "rating_count": { "$ifNull": ["$driver_info.rating_count", "$driver_info.review_count", 14] },
                 
