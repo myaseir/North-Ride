@@ -52,3 +52,15 @@ class TripInDB(TripBase):
         populate_by_name=True,
         arbitrary_types_allowed=True
     )
+# Look for your Trip creation validation schema
+class TripCreate(BaseModel):
+    origin: str
+    destination: str
+    date: str
+    time: str
+    base_price: float
+    total_seats: int = 4
+    # 🎯 ADD THESE TWO LINES:
+    is_brokered: bool = False
+    cost_price: float = 0.0
+    

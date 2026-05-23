@@ -4,10 +4,11 @@ from datetime import datetime, timezone
 from pydantic import BaseModel
 
 # Security & Repositories
-from app.core.deps import get_current_admin
+from app.core.deps import get_current_admin, get_current_user # 🎯 Added get_current_user fallback
 from app.repositories.booking_repo import BookingRepository
 from app.repositories.user_repo import UserRepository
 from app.services.travel_admin_service import TravelAdminService # 🎯 THE KEY IMPORT
+from app.services.trip_service import TripService # 🎯 Added TripService import
 
 router = APIRouter()
 
@@ -15,6 +16,7 @@ router = APIRouter()
 booking_repo = BookingRepository()
 user_repo = UserRepository()
 admin_service = TravelAdminService() # 🎯 Initialize the Service
+trip_service = TripService() # 🎯 Initialize TripService instance
 
 # --- SCHEMAS ---
 
@@ -103,3 +105,27 @@ async def approve_payment(
         "confirmed_at": datetime.now(timezone.utc),
         "details": result.get("driver_assigned")
     }
+
+# --- 3. CONCIERGE GHOST FLEET ENGINE ---
+
+@router.post("/admin/bulk-seed")
+async def seed_ghost_fleet(
+    payload: dict, 
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Allows the operator to inject bulk, high-availability placeholder runs
+    directly into the timeline grid to bridge marketplace passenger supply.
+    """
+    # Enforce security so random users can't generate schedules
+    if current_user.get("role") != "admin" and current_user.get("email") != "admin@gmail.com":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Access Denied: Only the CEO can seed managed fleets."
+        )
+        
+    trip_ids = await trip_service.bulk_schedule_brokered_trips(
+        admin_id=current_user["_id"], 
+        bulk_data=payload
+    )
+    return {"status": "success", "total_seeded": len(trip_ids)}

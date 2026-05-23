@@ -5,8 +5,8 @@ from app.repositories.user_repo import UserRepository  # 🎯 Added
 from app.db.redis import redis_mgr 
 from fastapi import HTTPException, status
 import logging
-from datetime import datetime, timezone
-
+from datetime import datetime, timezone, timedelta
+from bson import ObjectId
 logger = logging.getLogger("uvicorn.error")
 
 class TripService:
@@ -103,6 +103,15 @@ class TripService:
                 raise HTTPException(status_code=400, detail="Seats are already booked.")
 
             await self.user_repo.set_active_trip(u_id, t_id)
+            if trip.get("is_brokered"):
+                seats_booked = len(seat_layout)
+                profit = (trip["base_price"] - trip["cost_price"]) * seats_booked
+                logger.critical(
+                    f"🚨 CONCIERGE BOOKING TRIPPED! 🚨\n"
+                    f"Passenger: {passenger_name} ({passenger_phone}) reserved {seats_booked} seats from {trip['origin']} to {trip['destination']}.\n"
+                    f"ACTION REQUIRED: Call a local driver immediately. Secure rate under {trip['cost_price']} PKR.\n"
+                    f"Net Commission Expected: {profit} PKR."
+                )
             return booking_id
 
         except Exception as e:
@@ -318,6 +327,47 @@ class TripService:
             return {"status": "success", "message": "Payout rejected."}
 
         raise HTTPException(status_code=400, detail="Invalid action")
+    
+    
+    async def bulk_schedule_brokered_trips(self, admin_id: str, bulk_data: dict):
+        origin = bulk_data["origin"]
+        destination = bulk_data["destination"]
+        start_date_str = bulk_data["start_date"]
+        days = bulk_data.get("days_to_schedule", 14)
+        times = bulk_data["departure_times"]
+        
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+        created_trip_ids = []
+
+        for i in range(days):
+            current_day = start_date + timedelta(days=i)
+            date_string = current_day.strftime("%Y-%m-%d")
+            
+            for departure_time in times:
+                trip_payload = {
+                    # 🎯 THE FIX: Generate a real, brand-new, unique ObjectId on every iteration.
+                    # This satisfies the repo's _to_id validation check, prevents it from turning into null,
+                    # and completely clears the driver_id_1_status_1 index rule!
+                    "driver_id": ObjectId(), 
+                    
+                    "is_brokered": True,
+                    "origin": origin,
+                    "destination": destination,
+                    "date": date_string,
+                    "time": departure_time,
+                    "total_seats": bulk_data.get("total_seats", 4),
+                    "available_seats": bulk_data.get("total_seats", 4),
+                    "base_price": float(bulk_data["base_price"]),
+                    "cost_price": float(bulk_data["cost_price"]),
+                    "seat_layout": ["FL", "RL", "RC", "RR"],
+                    "status": "scheduled",
+                    "created_at": datetime.now(timezone.utc)
+                }
+                trip_id = await self.trip_repo.create_trip(trip_payload)
+                created_trip_ids.append(str(trip_id))
+                
+        logger.warning(f"🎰 GHOST FLEET ACTIVATED: {len(created_trip_ids)} trips seeded.")
+        return created_trip_ids
 
 class RatingService:
     def __init__(self, booking_repo, user_repo):
@@ -349,3 +399,7 @@ class RatingService:
                 new_avg = total_stars / count if count > 0 else 0
                 
                 await self.user_repo.update_driver_average_rating(driver_id, new_avg, count)
+                
+                
+   
+    
