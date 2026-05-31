@@ -1,5 +1,5 @@
 "use client";
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { 
   ShieldCheck, Upload, X, Loader2, 
   ChevronLeft, ChevronRight, CheckCircle2, 
@@ -82,7 +82,8 @@ export default function DriverSignup({ onBack, onComplete }) {
     
     setLoading(true);
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/auth/request-otp', {
+      // 🎯 FIXED URL INTERFACES FOR LIVE PRODUCTION ROUTING
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email })
@@ -109,7 +110,7 @@ export default function DriverSignup({ onBack, onComplete }) {
     try {
       const data = new FormData();
       
-      // Text Fields (Mapping to Backend Form parameters)
+      // Text Fields
       data.append("username", formData.fullName);
       data.append("email", formData.email);
       data.append("password", formData.password);
@@ -132,7 +133,8 @@ export default function DriverSignup({ onBack, onComplete }) {
         data.append("carImages", file);
       });
 
-      const response = await fetch('http://127.0.0.1:8000/api/auth/register-driver', {
+      // 🎯 FIXED URL INTERFACES FOR LIVE PRODUCTION ROUTING
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/register-driver`, {
         method: 'POST',
         body: data,
       });
@@ -146,7 +148,6 @@ export default function DriverSignup({ onBack, onComplete }) {
       onComplete(); 
     } catch (err) {
       toast.error(err.message, { id: toastId });
-      // Remain on step 4 or return to 3 to allow retry
       setStep(3); 
     } finally {
       setLoading(false);
@@ -195,7 +196,7 @@ export default function DriverSignup({ onBack, onComplete }) {
             <InputField label="Account Password" value={formData.password} type="password" placeholder="••••••••" onChange={v => setFormData({...formData, password: v})} />
             <InputField label="CNIC Number" value={formData.cnicNumber} placeholder="42101-XXXXXXX-X" onChange={v => setFormData({...formData, cnicNumber: v})} />
             <div className="grid grid-cols-2 gap-4">
-              <InputField label="Primary Contact" value={formData.contact1} placeholder="03XX-XXXXXXX" onChange={v => setFormData({...formData, contact1: v})} />
+              <PrimaryContactField label="Primary Contact" value={formData.contact1} placeholder="03XX-XXXXXXX" onChange={v => setFormData({...formData, contact1: v})} />
               <InputField label="Secondary (Opt)" value={formData.contact2} placeholder="03XX-XXXXXXX" onChange={v => setFormData({...formData, contact2: v})} />
             </div>
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
@@ -275,6 +276,18 @@ function InputField({ label, value, placeholder, onChange, type="text" }) {
       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
       <input 
         type={type} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)}
+        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-emerald-500 focus:bg-white transition-all text-xs font-bold text-slate-700"
+      />
+    </div>
+  );
+}
+
+function PrimaryContactField({ label, value, placeholder, onChange }) {
+  return (
+    <div className="space-y-1">
+      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
+      <input 
+        type="text" value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)}
         className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-emerald-500 focus:bg-white transition-all text-xs font-bold text-slate-700"
       />
     </div>
