@@ -17,7 +17,7 @@ class DriverOnboard(BaseModel):
     vehicle_type: str  # e.g., AC Car, Non-AC, SUV, Executive
     total_seats: int = Field(4, ge=1, le=10)
     
-    # Business contact for Concierge/Shadow Routing
+    # 🎯 NEW: Business contact for Concierge/Shadow Routing
     driver_phone: str = Field(..., description="Active contact for ride coordination")
     
     # Image URLs from frontend upload (Cloudinary/S3)
@@ -36,7 +36,6 @@ async def register_as_driver(
     """
     Upgrades a passenger to a driver by adding a driver_profile.
     Places them in the Admin verification queue with a 'pending' status.
-    Safely casts the incoming _id to a proper BSON ObjectId for Vercel environments.
     """
     
     # 1. Check if already approved
@@ -52,6 +51,7 @@ async def register_as_driver(
     driver_profile["verification_status"] = "pending" # options: pending, rejected, approved
 
     # 3. Construct the MongoDB update
+    # We set is_approved to False initially so Admin must manually toggle it.
     update_query = {
         "$set": {
             "driver_profile": driver_profile,
@@ -65,18 +65,10 @@ async def register_as_driver(
         }
     }
     
-    # 4. 🎯 THE PRODUCTION FIX: Convert string IDs to proper BSON ObjectIds
-    # This prevents unmapped filter mismatches due to serverless JSON serialization drops.
-    user_oid = user_repo._to_id(current_user.get("_id") or current_user.get("id"))
-    if not user_oid:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Invalid or expired user session tracking credentials."
-        )
-
-    # Update the Database using the safely converted ObjectId context
+    # 4. Update the Database
+    # Using the unique user _id to upsert the driver profile fields
     success = await user_repo.collection.update_one(
-        {"_id": user_oid}, 
+        {"_id": current_user["_id"]}, 
         update_query
     )
     

@@ -69,13 +69,9 @@ class UserRepository:
 
     # 🎯 MERGED: admin_verify_driver (Kept the detailed driver_profile updates)
     async def admin_verify_driver(self, user_id: str, status: bool) -> bool:
-        """
-        Admin approval logic. Automatically synchronizes published 
-        trip states when a captain profile changes approval status.
-        """
+        """Admin approval logic."""
         oid = self._to_id(user_id)
-        if not oid: 
-            return False
+        if not oid: return False
 
         if status:
             # Approved
@@ -83,39 +79,20 @@ class UserRepository:
                 "$set": {
                     "is_approved": True,
                     "is_verified": True,
-                    "driver_profile.verification_status": "approved",
                     "driver_profile.is_verified": True, 
                     "driver_profile.approved_at": datetime.now(timezone.utc)
                 }
             }
-            
-            # 🎯 STATE SYNC: Ensure pre-published trips by this driver 
-            # become active and visible in the passenger feed search engines
-            await db.db.trips.update_many(
-                {"driver_id": oid, "status": "scheduled"},
-                {"$set": {"is_driver_approved": True, "updated_at": datetime.now(timezone.utc)}}
-            )
         else:
-            # Rejected: Strip driver capabilities but preserve the base passenger profile account
+            # Rejected: Strip driver capabilities but keep the user record
             update_query = {
                 "$set": {
                     "is_approved": False, 
                     "is_driver": False,
-                    "driver_profile.is_verified": False,
-                    "driver_profile.verification_status": "rejected"
+                    "driver_profile.is_verified": False
                 },
-                "$pull": {"roles": "DRIVER"} # Removes role so they vanish from pending review logs
+                "$pull": {"roles": "DRIVER"} # Remove role so they vanish from pending lists
             }
-            
-            # 🎯 STATE SYNC: If rejected, pull down their upcoming scheduled trips automatically
-            await db.db.trips.update_many(
-                {"driver_id": oid, "status": "scheduled"},
-                {"$set": {
-                    "status": "cancelled", 
-                    "system_note": "Captain verification profile was rejected by Admin dispatch team.",
-                    "updated_at": datetime.now(timezone.utc)
-                }}
-            )
 
         result = await self.collection.update_one({"_id": oid}, update_query)
         return result.modified_count > 0
