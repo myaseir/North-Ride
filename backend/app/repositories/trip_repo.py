@@ -79,6 +79,32 @@ class TripRepository:
         result = await self.collection.insert_one(trip_data)
         return str(result.inserted_id)
 
+    
+    async def update_trip_price(self, trip_id: str, driver_id: str, new_price: float) -> bool:
+        """
+        Allows a driver to dynamically update their trip's seat price.
+        Locks changes to ensure only the original driver can modify it.
+        """
+        try:
+            clean_price = float(new_price)
+            result = await self.collection.update_one(
+                {
+                    "_id": self._to_id(trip_id),
+                    "driver_id": self._to_id(driver_id),
+                    "status": "scheduled" # Prevents changing prices on active/completed runs
+                },
+                {
+                    "$set": {
+                        "price": clean_price,
+                        "base_price": clean_price, # Keeps both legacy aggregation fields synced
+                        "price_updated_at": datetime.now(timezone.utc)
+                    }
+                }
+            )
+            return result.modified_count > 0
+        except (ValueError, TypeError):
+            return False
+    
     async def find_trips(self, origin: str, destination: str, date_str: Optional[str] = None) -> List[dict]:
         """Finds trips matching the exact date with live Driver Info Enrichment."""
         match_query = {

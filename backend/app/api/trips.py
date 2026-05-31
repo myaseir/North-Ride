@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends,BackgroundTasks, HTTPException, status,Re
 from typing import List, Optional
 from datetime import datetime, timezone,timedelta
 from bson import ObjectId
+from pydantic import BaseModel, Field
 from app.db.mongodb import db
 from pydantic import BaseModel
 from app.core.deps import get_current_user
@@ -34,18 +35,34 @@ class PayoutAction(BaseModel):
     action: str # "credit" or "reject"
     transfer_ref: Optional[str] = None
     
-  
+class PriceUpdateSchema(BaseModel):
+    new_price: float = Field(..., gt=0, description="The updated price for remaining seats")  
     
+class TripCreate(BaseModel):
+    origin: str
+    destination: str
+    departure_time: datetime
+    price: float  # 👈 Make sure this line is explicitly added here!
+    base_price: Optional[float] = None
+    total_seats: int = 4
 # --- DRIVER ENDPOINTS ---
 
 @router.post("/publish")
 async def publish_trip(data: TripCreate, current_user: dict = Depends(get_current_user)):
-    """Dispatches a new trip sequence."""
+    """Dispatches a new trip sequence safely handling price field variants."""
     if "DRIVER" not in current_user.get("roles", []) or not current_user.get("is_approved", False):
         raise HTTPException(status_code=403, detail="Only approved captains can dispatch.")
 
     trip_dict = data.model_dump()
     
+    # 🎯 FIX THE 422 MISMATCH:
+    # Safely duplicate 'price' and 'base_price' so your search and repository aggregations
+    # can access either structural key seamlessly depending on history or manifest view states.
+    if "price" in trip_dict and not trip_dict.get("base_price"):
+        trip_dict["base_price"] = trip_dict["price"]
+    elif "base_price" in trip_dict and not trip_dict.get("price"):
+        trip_dict["price"] = trip_dict["base_price"]
+
     # Injecting the necessary fields
     trip_dict["driver_id"] = str(current_user["_id"])
     if "departure_time" in trip_dict and not trip_dict.get("date"):
@@ -60,8 +77,7 @@ async def publish_trip(data: TripCreate, current_user: dict = Depends(get_curren
     # Call the service
     new_id = await trip_service.create_new_trip(trip_dict)
     
-    # 🎯 THE FIX: The Repo mutated trip_dict and turned driver_id into an ObjectId.
-    # We MUST cast it back to a string before FastAPI attempts to return it!
+    # Cast variables back to clean payload formats for serialization safety
     trip_dict["driver_id"] = str(trip_dict.get("driver_id", ""))
     trip_dict["id"] = str(new_id) 
     
@@ -122,6 +138,32 @@ async def start_trip(trip_id: str, current_user: dict = Depends(get_current_user
 async def end_trip(trip_id: str, current_user: dict = Depends(get_current_user)):
     """Completes trip and moves revenue to driver wallet."""
     return await trip_service.complete_trip(trip_id, str(current_user["_id"]))
+
+@router.patch("/{trip_id}/price", tags=["Driver"])
+async def modify_trip_fare(
+    trip_id: str,
+    payload: PriceUpdateSchema,
+    current_user: dict = Depends(get_current_user)
+):
+    """Allows the logged-in driver to update the seat price for remaining upcoming inventory."""
+    if "DRIVER" not in current_user.get("roles", []):
+        raise HTTPException(status_code=403, detail="Only registered captains can modify trip fares.")
+
+    success = await trip_service.trip_repo.update_trip_price(
+        trip_id=trip_id, 
+        driver_id=str(current_user["_id"]), 
+        new_price=payload.new_price
+    )
+    
+    if not success:
+        raise HTTPException(
+            status_code=400, 
+            detail="Price update failed. Verify the trip exists, belongs to you, and hasn't started yet."
+        )
+        
+    return {"status": "success", "message": f"Trip fare updated to {payload.new_price} successfully."}
+
+
 # --- PASSENGER ENDPOINTS ---
 
 @router.get("/search")
