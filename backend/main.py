@@ -1,6 +1,8 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Header
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from typing import Optional
+from datetime import datetime, timezone
 
 # --- IMPORT YOUR MODULES ---
 from app.api.auth import router as auth_router
@@ -12,12 +14,16 @@ from app.api.admin_travel import router as admin_router
 from app.api.system import router as system_router
 from app.api import passenger
 
+# 🎯 NEW IMPORTS: Bring in the repos to run the cleanup methods
+from app.repositories.trip_repo import TripRepository
+from app.repositories.booking_repo import BookingRepository
+
 # Import connect functions and the db instance
 from app.db.mongodb import connect_to_mongo, close_mongo_connection, db
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # This runs on startup
+    # This runs on startup - Serverless friendly connection
     await connect_to_mongo()
     yield
     # This runs on shutdown
@@ -33,6 +39,49 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- 🎯 NEW: SECURED VERCEL CRON CLEANUP ENDPOINT ---
+@app.post("/api/system/cron-cleanup", tags=["System"])
+async def trigger_system_cron_cleanup(
+    x_cron_signature: Optional[str] = Header(None, alias="X-Cron-Signature")
+):
+    """
+    🎯 VERCEL SERVERLESS CRON CLEANUP ROUTINE
+    Secured by Vercel App Headers. Triggers the internal repository automated sweeps.
+    """
+    import os
+    # 🔒 Security Gate: If hosted live on Vercel, reject manual unauthorized pings
+    if os.getenv("VERCEL_ENV") and not x_cron_signature:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized: System execution signature missing."
+        )
+
+    try:
+        # Initialize repositories directly inside the request container
+        trip_repo = TripRepository()
+        booking_repo = BookingRepository()
+
+        # 1. Rule 1: Auto-complete stagnant driver runs older than 3 days
+        trips_closed = await trip_repo.auto_complete_forgotten_trips()
+        
+        # 2. Rule 2: Cancel unverified seat holds ignored by admin older than 4 days
+        bookings_expired = await booking_repo.expire_stale_unverified_bookings()
+
+        return {
+            "status": "success",
+            "executed_at": datetime.now(timezone.utc),
+            "summary": {
+                "auto_completed_trips_count": trips_closed,
+                "cancelled_bookings_count": bookings_expired
+            }
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal Database Watchdog Exception: {str(e)}"
+        )
+
 
 # --- ROUTER REGISTRATION ---
 app.include_router(user_router, prefix="/api/users", tags=["Users"])

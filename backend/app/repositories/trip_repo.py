@@ -83,6 +83,7 @@ class TripRepository:
         """Finds trips matching the exact date with live Driver Info Enrichment."""
         match_query = {
             "origin": origin.strip().lower(),
+            
             "destination": destination.strip().lower(),
             "status": "scheduled",
             "available_seats": {"$gt": 0}
@@ -183,3 +184,73 @@ class TripRepository:
         cursor = self.collection.aggregate(pipeline)
         trips = await cursor.to_list(length=limit)
         return [self._format_trip(t) for t in trips]
+    
+    
+    # 🎯 ADD THIS METHOD AT THE BOTTOM OF THE CLASS:
+    async def auto_complete_forgotten_trips(self) -> int:
+        """
+        Rule 1: If a ride is scheduled/in-progress but departure_time 
+        is older than 3 days, auto-complete the trip, its bookings, 
+        and release active passenger status locks automatically.
+        """
+        three_days_ago = datetime.now(timezone.utc) - timedelta(days=3)
+        
+        # 1. Fetch all stale trips matching criteria
+        query = {
+            "status": {"$in": ["scheduled", "in-progress"]},
+            "departure_time": {"$lt": three_days_ago}
+        }
+        
+        cursor = self.collection.find(query)
+        stale_trips = await cursor.to_list(length=100)
+        
+        if not stale_trips:
+            return 0
+            
+        # Extract trip IDs as BOTH ObjectIds and plain strings to handle all data entry types
+        stale_trip_oids = [trip["_id"] for trip in stale_trips]
+        stale_trip_strings = [str(trip["_id"]) for trip in stale_trips]
+        combined_trip_ids = stale_trip_oids + stale_trip_strings
+        
+        # 2. Sync and update all related passenger bookings atomically
+        await db.db.bookings.update_many(
+            {
+                "trip_id": {"$in": combined_trip_ids},
+                "status": "confirmed"  
+            },
+            {"$set": {
+                "status": "completed",
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+        
+        # 3. Release passenger active trip screen holds in the users collection
+        for trip in stale_trips:
+            passenger_ids = set()
+            
+            for p in trip.get("passengers", []):
+                if p.get("passenger_id"):
+                    passenger_ids.add(p.get("passenger_id"))
+                    
+            for s in trip.get("seats", []):
+                if s.get("passenger_id"):
+                    passenger_ids.add(s.get("passenger_id"))
+            
+            for p_id in passenger_ids:
+                user_oid = self._to_id(p_id)
+                if user_oid:
+                    await db.db.users.update_one(
+                        {"_id": user_oid},
+                        {"$set": {"active_trip_id": None}}
+                    )
+
+        # 4. Atomically update the parent trip documents to completed
+        result = await self.collection.update_many(
+            {"_id": {"$in": stale_trip_oids}},
+            {"$set": {
+                "status": "completed",
+                "system_note": "Auto-completed by system watchdog cron after 3 days stagnation window.",
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+        return result.modified_count

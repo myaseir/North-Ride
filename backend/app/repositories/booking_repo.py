@@ -380,3 +380,50 @@ class BookingRepository:
             ledger.append(item)
             
         return ledger
+    
+    # 🎯 ADD THIS METHOD AT THE BOTTOM OF THE CLASS:
+    async def expire_stale_unverified_bookings(self) -> int:
+        """
+        Rule 2: If a booking verification application is ignored 
+        for more than 4 days, auto-cancel it, release seat holds, 
+        and pull the passenger data out of the trip tracking arrays.
+        """
+        from datetime import timedelta
+        four_days_ago = datetime.now(timezone.utc) - timedelta(days=4)
+        
+        query = {
+            "status": "pending",  # Passenger applied, but admin hasn't confirmed yet
+            "created_at": {"$lt": four_days_ago}
+        }
+        
+        # 1. Fetch stale booking entries to process matching trip documents
+        cursor = self.collection.find(query)
+        stale_bookings = await cursor.to_list(length=200)
+        
+        for booking in stale_bookings:
+            seats_to_release = len(booking.get("seat_layout", [1]))
+            passenger_id = booking.get("passenger_id")
+            
+            # 🎯 THE DATA UNIFICATION FIX: 
+            # Reverses structural array entries so passenger profiles are cleanly unlinked
+            await self.trips.update_one(
+                {"_id": booking["trip_id"]},
+                {
+                    "$inc": {"available_seats": seats_to_release},
+                    "$pull": {
+                        "seats": {"passenger_id": str(passenger_id)},
+                        "passengers": {"passenger_id": passenger_id}
+                    }
+                }
+            )
+            
+        # 2. Update all stale record flags atomically inside the bookings collection
+        result = await self.collection.update_many(
+            query,
+            {"$set": {
+                "status": "cancelled",
+                "cancellation_reason": "Admin confirmation threshold timeout (4 Days)",
+                "cancelled_at": datetime.now(timezone.utc)
+            }}
+        )
+        return result.modified_count
