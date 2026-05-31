@@ -1,161 +1,372 @@
 "use client";
 
 import { useState } from 'react';
-import { 
-  History, ArrowUpRight, Ban, CheckCircle2, 
-  Copy, ChevronDown, ChevronUp, MapPin 
-} from 'lucide-react';
+import { History, ArrowUpRight, Ban, CheckCircle2, Copy, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-export default function RecentRides({ rides = [] }) { 
-  // viewMode can be: 3, 10, or 'all'
+/* ─── STYLES ───────────────────────────────────────────────────────── */
+const STYLE = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap');
+
+  .rr-root * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  .rr-root { font-family: 'DM Sans', sans-serif; margin-top: 24px; }
+
+  .rr-card {
+    background: #fff;
+    border: 1.5px solid #f1f5f9;
+    border-radius: 28px;
+    padding: 22px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+
+  /* Header */
+  .rr-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .rr-header-left { display: flex; align-items: center; gap: 10px; }
+  .rr-header-icon {
+    width: 36px; height: 36px;
+    background: #0f172a;
+    border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .rr-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+  }
+  .rr-count-badge {
+    font-size: 10px;
+    font-weight: 700;
+    color: #16a34a;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Ride row */
+  .rr-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 18px;
+    border: 1.5px solid #f1f5f9;
+    background: #fafafa;
+    margin-bottom: 8px;
+    transition: border-color 200ms, background 200ms, box-shadow 200ms;
+  }
+  .rr-row:last-child { margin-bottom: 0; }
+  .rr-row:hover {
+    background: #fff;
+    border-color: #e2e8f0;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  }
+
+  .rr-row-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+  .rr-status-icon {
+    width: 38px; height: 38px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .rr-status-icon--done   { background: #f0fdf4; color: #16a34a; }
+  .rr-status-icon--cancel { background: #fff1f2; color: #e11d48; }
+
+  .rr-info { min-width: 0; }
+  .rr-route {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 3px;
+  }
+  .rr-route-arrow { color: #cbd5e1; margin: 0 4px; }
+  .rr-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .rr-date {
+    font-size: 10px;
+    font-weight: 600;
+    color: #94a3b8;
+  }
+  .rr-dot {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: #cbd5e1;
+    flex-shrink: 0;
+  }
+  .rr-status-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .rr-status-label--done   { color: #16a34a; }
+  .rr-status-label--cancel { color: #e11d48; }
+  .rr-id-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 5px;
+  }
+  .rr-id {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    color: #94a3b8;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 2px 7px;
+  }
+  .rr-copy-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #cbd5e1;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    transition: color 150ms;
+  }
+  .rr-copy-btn:hover { color: #16a34a; }
+
+  /* Earnings */
+  .rr-earnings { text-align: right; flex-shrink: 0; }
+  .rr-amount {
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: -0.02em;
+  }
+  .rr-amount--done   { color: #0f172a; }
+  .rr-amount--cancel { color: #cbd5e1; text-decoration: line-through; }
+  .rr-currency {
+    font-size: 9px;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* Expand / collapse */
+  .rr-expand-btn {
+    width: 100%;
+    margin-top: 12px;
+    padding: 13px;
+    background: #f8fafc;
+    border: 1.5px solid #f1f5f9;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    transition: background 150ms, border-color 150ms, color 150ms;
+    letter-spacing: 0.02em;
+  }
+  .rr-expand-btn:hover { background: #f0fdf4; border-color: #bbf7d0; color: #16a34a; }
+
+  .rr-collapse-btn {
+    width: 100%;
+    margin-top: 6px;
+    padding: 10px;
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: color 150ms;
+    letter-spacing: 0.02em;
+  }
+  .rr-collapse-btn:hover { color: #e11d48; }
+
+  /* Empty state */
+  .rr-empty {
+    padding: 40px 20px;
+    text-align: center;
+    border: 2px dashed #f1f5f9;
+    border-radius: 18px;
+    background: #fafafa;
+  }
+  .rr-empty-icon {
+    width: 44px; height: 44px;
+    background: #fff;
+    border: 1.5px solid #f1f5f9;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 12px;
+  }
+  .rr-empty-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+  }
+`;
+
+let styleInjected = false;
+function injectStyle() {
+  if (styleInjected || typeof document === 'undefined') return;
+  const el = document.createElement('style');
+  el.textContent = STYLE;
+  document.head.appendChild(el);
+  styleInjected = true;
+}
+
+/* ─── COMPONENT ────────────────────────────────────────────────────── */
+export default function RecentRides({ rides = [] }) {
+  injectStyle();
   const [viewMode, setViewMode] = useState(3);
 
   const copyTripId = (id) => {
     if (!id) return;
     navigator.clipboard.writeText(id);
-    toast.success("Trip ID copied!", {
-      icon: <CheckCircle2 className="text-emerald-500" />,
-      style: { 
-        borderRadius: '20px', 
-        background: '#0f172a', 
-        color: '#fff', 
-        fontSize: '10px',
-        fontWeight: 'bold',
-        textTransform: 'uppercase'
+    toast.success("ID copied", {
+      style: {
+        borderRadius: '12px',
+        background: '#0f172a',
+        color: '#fff',
+        fontSize: '12px',
+        fontWeight: '600',
+        fontFamily: "'DM Sans', sans-serif",
       }
     });
   };
 
-  const displayedRides = viewMode === 'all' 
-    ? rides 
-    : rides.slice(0, viewMode);
-
-  const hasMore = rides.length > displayedRides.length;
-  const canSeeLess = viewMode !== 3;
-
-  const handleSeeMore = () => {
-    setViewMode(viewMode === 3 ? 10 : 'all');
-  };
+  const displayed = viewMode === 'all' ? rides : rides.slice(0, viewMode);
+  const hasMore   = rides.length > displayed.length;
+  const canLess   = viewMode !== 3;
 
   return (
-    <div className="bg-white/90 backdrop-blur-xl border border-emerald-50 rounded-[2.5rem] p-8 shadow-2xl shadow-emerald-900/5 mt-8 animate-in fade-in duration-700">
-      
-      {/* Header */}
-      <div id="ride-history-header" className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-slate-900 rounded-xl">
-            <History className="text-emerald-400" size={18} />
-          </div>
-          <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Deployment Logs</h2>
-        </div>
-        {rides.length > 0 && (
-           <span className="text-[9px] font-black text-emerald-600 uppercase bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-             {rides.length} Routes Total
-           </span>
-        )}
-      </div>
+    <div className="rr-root">
+      <div className="rr-card">
 
-      <div className="space-y-4">
-        {displayedRides.length > 0 ? (
+        {/* Header */}
+        <div className="rr-header">
+          <div className="rr-header-left">
+            <div className="rr-header-icon">
+              <History color="#34d399" size={16} />
+            </div>
+            <span className="rr-title">Past Trips</span>
+          </div>
+          {rides.length > 0 && (
+            <span className="rr-count-badge">{rides.length} trips</span>
+          )}
+        </div>
+
+        {/* List */}
+        {displayed.length > 0 ? (
           <>
-            {displayedRides.map((ride, i) => {
-              const status = (ride.status || "COMPLETED").toUpperCase();
-              const isCompleted = status === 'COMPLETED';
-              const isCancelled = status === 'CANCELLED';
+            {displayed.map((ride, i) => {
+              const isDone = (ride.status || 'completed').toLowerCase() === 'completed';
+              const date   = ride.timestamp
+                ? new Date(ride.timestamp).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })
+                : 'Recent';
+
+              // 🎯 THE REVENUE CALCULATION ENGINE CORRECTION
+              // Check for explicit pre-computed platform earnings first. 
+              // If missing, look for confirmed passengers on board to scale the fare accurately.
+              let totalEarnings = 0;
+              if (ride.earnings !== undefined && ride.earnings !== null) {
+                totalEarnings = Number(ride.earnings);
+              } else {
+                const checkedSeatsCount = Array.isArray(ride.passengers) ? ride.passengers.length : 0;
+                const pricePerSeat = Number(ride.fare || ride.price || 0);
+                totalEarnings = checkedSeatsCount * pricePerSeat;
+              }
 
               return (
-                <div key={ride._id || i} className="group flex items-center justify-between p-5 bg-slate-50/50 rounded-[24px] border border-transparent hover:border-emerald-100 hover:bg-white hover:shadow-xl hover:shadow-emerald-900/5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2">
-                  
-                  <div className="flex items-center gap-5">
-                    {/* Status Icon */}
-                    <div className={`p-3 rounded-2xl transition-colors ${
-                      isCompleted ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
-                    }`}>
-                      {isCompleted ? <ArrowUpRight size={18}/> : <Ban size={18}/>}
+                <div key={ride._id || i} className="rr-row">
+                  <div className="rr-row-left">
+                    {/* Icon */}
+                    <div className={`rr-status-icon ${isDone ? 'rr-status-icon--done' : 'rr-status-icon--cancel'}`}>
+                      {isDone ? <ArrowUpRight size={16} /> : <Ban size={16} />}
                     </div>
-                    
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <p className={`text-xs font-black uppercase tracking-tight ${isCompleted ? 'text-slate-700' : 'text-rose-500'}`}>
-                          {status}
-                        </p>
-                        <span className="h-1 w-1 rounded-full bg-slate-300" />
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">
-                          {ride.timestamp ? new Date(ride.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'Recent'}
-                        </p>
-                      </div>
 
-                      {/* Route Details */}
-                      <div className="flex items-center gap-1.5 text-slate-500">
-                        <MapPin size={10} className="text-emerald-500" />
-                        <p className="text-[10px] font-bold uppercase tracking-tight">
-                          {ride.origin || 'Base'} <span className="text-slate-300 mx-1">→</span> {ride.destination || 'Sector'}
-                        </p>
+                    {/* Info */}
+                    <div className="rr-info">
+                      <div className="rr-route">
+                        {ride.origin || 'Start'}
+                        <span className="rr-route-arrow">→</span>
+                        {ride.destination || 'End'}
                       </div>
-
-                      {/* ID Badge */}
-                      <div className="flex items-center gap-2 pt-1">
-                          <span className="text-[8px] font-mono text-slate-400 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
-                            TX_{ride.id ? ride.id.substring(0, 6) : 'N/A'}
-                          </span>
-                          <button 
-                              onClick={() => copyTripId(ride.id)}
-                              className="text-slate-300 hover:text-emerald-500 transition-colors active:scale-90"
-                          >
-                              <Copy size={10} />
-                          </button>
+                      <div className="rr-meta">
+                        <span className="rr-date">{date}</span>
+                        <span className="rr-dot" />
+                        <span className={`rr-status-label ${isDone ? 'rr-status-label--done' : 'rr-status-label--cancel'}`}>
+                          {isDone ? 'Done' : 'Cancelled'}
+                        </span>
+                      </div>
+                      <div className="rr-id-row">
+                        <span className="rr-id">{ride.id ? ride.id.substring(0, 8) : 'N/A'}</span>
+                        <button className="rr-copy-btn" onClick={() => copyTripId(ride.id)} title="Copy ID">
+                          <Copy size={11} />
+                        </button>
                       </div>
                     </div>
                   </div>
 
-                  {/* Earnings Segment */}
-                  <div className="text-right">
-                    <p className={`text-sm font-black tabular-nums ${isCompleted ? 'text-slate-900' : 'text-slate-300 line-through'}`}>
-                     
-{isCompleted ? `+${ride.earnings || ride.fare || ride.price || 0}` : '0'}
-                    </p>
-                    <p className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">PKR Credits</p>
+                  {/* Earnings */}
+                  <div className="rr-earnings">
+                    <div className={`rr-amount ${isDone ? 'rr-amount--done' : 'rr-amount--cancel'}`}>
+                      {isDone ? `+${totalEarnings.toLocaleString()}` : '—'}
+                    </div>
+                    <div className="rr-currency">PKR</div>
                   </div>
                 </div>
               );
             })}
 
-            {/* Expand / Collapse Controls */}
-            <div className="flex flex-col items-center gap-2 mt-6">
-              {hasMore && (
-                <button 
-                  onClick={handleSeeMore}
-                  className="w-full py-4 bg-slate-50 rounded-2xl flex flex-col items-center justify-center gap-1 group hover:bg-emerald-50 transition-all border border-transparent hover:border-emerald-100"
-                >
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-emerald-600 transition-colors">
-                    Expand {viewMode === 3 ? 'Recent 10' : 'Full Registry'}
-                  </span>
-                  <ChevronDown size={14} className="text-slate-300 group-hover:text-emerald-500 animate-bounce" />
-                </button>
-              )}
-
-              {canSeeLess && (
-                <button 
-                  onClick={() => setViewMode(3)}
-                  className="w-full py-3 flex items-center justify-center gap-2 group transition-all"
-                >
-                  <ChevronUp size={14} className="text-slate-300 group-hover:text-rose-400 transition-colors" />
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-300 group-hover:text-rose-400 transition-colors">
-                    Collapse Logs
-                  </span>
-                </button>
-              )}
-            </div>
+            {/* Show more / less */}
+            {hasMore && (
+              <button className="rr-expand-btn" onClick={() => setViewMode(viewMode === 3 ? 10 : 'all')}>
+                <ChevronDown size={14} />
+                {viewMode === 3 ? 'Show 10 trips' : 'Show all trips'}
+              </button>
+            )}
+            {canLess && (
+              <button className="rr-collapse-btn" onClick={() => setViewMode(3)}>
+                <ChevronUp size={13} />
+                Show less
+              </button>
+            )}
           </>
         ) : (
-          <div className="py-16 text-center border-2 border-dashed border-slate-100 rounded-[32px] bg-slate-50/30">
-              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-                <History className="text-slate-200" size={20} />
-              </div>
-              <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">No recent rides on record</p>
+          <div className="rr-empty">
+            <div className="rr-empty-icon">
+              <History color="#cbd5e1" size={18} />
+            </div>
+            <p className="rr-empty-text">No trips yet</p>
           </div>
         )}
+
       </div>
     </div>
   );
