@@ -2,154 +2,550 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import Auth from './components/Auth'; 
+import Auth from './components/Auth';
 import Footer from './components/Footer';
-import Navbar from './components/Navbar'; 
-import { 
-  Loader2, ShieldCheck, MapPin, 
-  Zap, ChevronDown, CheckCircle, Car, ArrowRight 
+import Navbar from './components/Navbar';
+import Image from 'next/image';
+import {
+  Loader2, ShieldCheck, MapPin,
+  Zap, ChevronDown, Car, ArrowRight
 } from 'lucide-react';
 
+/* ─── STYLES ───────────────────────────────────────────────────────── */
+const STYLE = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@1&display=swap');
+
+  .hp-root * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  .hp-root {
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    background: #fff;
+    overflow-x: hidden;
+  }
+
+  /* ── Fade-in animations (CSS only, no framer-motion) ── */
+  @keyframes hp-fadein {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes hp-fadein-right {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes hp-bounce {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(6px); }
+  }
+  @keyframes hp-spin-slow {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes hp-shimmer {
+    to { background-position: -200% 0; }
+  }
+
+  .hp-anim-left  { animation: hp-fadein       0.55s ease both; }
+  .hp-anim-right { animation: hp-fadein-right 0.55s ease 0.1s both; }
+  .hp-anim-up    { animation: hp-fadein       0.45s ease both; }
+  .hp-anim-up-d1 { animation: hp-fadein       0.45s ease 0.1s both; }
+  .hp-anim-up-d2 { animation: hp-fadein       0.45s ease 0.2s both; }
+
+  /* ── Loading ── */
+  .hp-loading {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hp-spin { animation: spin 1s linear infinite; }
+
+  /* ── Hero ── */
+  .hp-hero {
+    position: relative;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    padding: 112px 24px 48px;
+    background: #fff;
+    overflow: hidden;
+  }
+  .hp-hero-glow {
+    position: absolute;
+    top: 0; right: 0;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(209,250,229,0.6) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .hp-hero-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    align-items: start;
+  }
+  @media (min-width: 1024px) {
+    .hp-hero { padding-top: 140px; }
+    .hp-hero-grid { grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+  }
+
+  /* Tag */
+  .hp-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 20px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #15803d;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 20px;
+  }
+
+  /* Heading */
+  .hp-h1 {
+    font-size: clamp(42px, 7vw, 72px);
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    margin-bottom: 20px;
+  }
+  .hp-h1-em {
+    font-style: italic;
+    font-weight: 300;
+    color: #16a34a;
+    font-family: 'DM Serif Display', Georgia, serif;
+  }
+
+  .hp-hero-desc {
+    font-size: 15px;
+    font-weight: 500;
+    color: #64748b;
+    line-height: 1.7;
+    max-width: 420px;
+    margin-bottom: 0;
+  }
+
+  /* Auth card wrapper */
+  .hp-auth-wrap {
+    width: 100%;
+    max-width: 440px;
+    margin: 0 auto;
+    position: relative;
+  }
+  @media (min-width: 1024px) {
+    .hp-auth-wrap { margin: 0 0 0 auto; }
+  }
+
+  /* Scroll indicator */
+  .hp-scroll-hint {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0.45;
+    z-index: 2;
+  }
+  @media (min-width: 1024px) { .hp-scroll-hint { display: flex; } }
+  .hp-scroll-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: #94a3b8;
+  }
+  .hp-scroll-arrow {
+    margin-top: 6px;
+    color: #94a3b8;
+    animation: hp-bounce 2s ease-in-out infinite;
+  }
+
+  /* ── Section shared ── */
+  .hp-section { padding: 80px 24px; }
+  .hp-section--gray { background: #f8fafc; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; }
+  .hp-section--white { background: #fff; }
+  .hp-inner { max-width: 1120px; margin: 0 auto; }
+
+  .hp-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    color: #16a34a;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+  }
+  .hp-section-h2 {
+    font-size: clamp(26px, 4vw, 36px);
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+  .hp-section-center { text-align: center; margin-bottom: 56px; }
+
+  /* ── Feature cards ── */
+  .hp-features-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  @media (min-width: 768px) { .hp-features-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .hp-feature-card {
+    background: #fff;
+    border: 1.5px solid #f1f5f9;
+    border-radius: 24px;
+    padding: 28px 24px;
+    transition: box-shadow 200ms, border-color 200ms, transform 200ms;
+  }
+  .hp-feature-card:hover {
+    box-shadow: 0 8px 32px rgba(0,0,0,0.07);
+    border-color: #e2e8f0;
+    transform: translateY(-4px);
+  }
+  .hp-feature-icon {
+    width: 48px; height: 48px;
+    background: #f8fafc;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 18px;
+    transition: background 200ms;
+  }
+  .hp-feature-card:hover .hp-feature-icon { background: #f0fdf4; }
+  .hp-feature-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+  }
+  .hp-feature-desc {
+    font-size: 13px;
+    font-weight: 500;
+    color: #64748b;
+    line-height: 1.65;
+  }
+
+  /* ── How it works ── */
+  .hp-how-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+    align-items: center;
+  }
+  @media (min-width: 768px) {
+    .hp-how-grid { flex-direction: row; gap: 64px; }
+  }
+
+  .hp-steps { display: flex; flex-direction: column; gap: 28px; flex: 1; }
+  .hp-step  { display: flex; gap: 18px; align-items: flex-start; }
+  .hp-step-num {
+    width: 36px; height: 36px;
+    border-radius: 11px;
+    background: #f0fdf4;
+    border: 1.5px solid #bbf7d0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #16a34a;
+    flex-shrink: 0;
+  }
+  .hp-step-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+  }
+  .hp-step-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: #64748b;
+    line-height: 1.6;
+  }
+
+  /* Abstract visual */
+  .hp-visual {
+    flex: 1;
+    width: 100%;
+    max-width: 360px;
+    aspect-ratio: 1;
+    background: #f8fafc;
+    border: 1.5px solid #f1f5f9;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin: 0 auto;
+  }
+  .hp-visual-ring {
+    position: absolute;
+    inset: 12px;
+    border-radius: 50%;
+    border: 1.5px dashed #d1fae5;
+    animation: hp-spin-slow 60s linear infinite;
+  }
+  .hp-visual-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    z-index: 1;
+  }
+  .hp-visual-icon {
+    width: 56px; height: 56px;
+    background: #fff;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hp-visual-bar {
+    width: 80px; height: 6px;
+    background: #e2e8f0;
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .hp-visual-fill {
+    width: 50%; height: 100%;
+    background: #34d399;
+    border-radius: 99px;
+  }
+
+  /* ── Routes ── */
+  .hp-routes-header {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  @media (min-width: 768px) {
+    .hp-routes-header { flex-direction: row; align-items: flex-end; justify-content: space-between; }
+  }
+  .hp-routes-sub {
+    font-size: 13px;
+    font-weight: 500;
+    color: #64748b;
+    max-width: 240px;
+  }
+
+  .hp-routes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (min-width: 1024px) {
+    .hp-routes-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  .hp-route-card {
+    background: #fff;
+    border: 1.5px solid #f1f5f9;
+    border-radius: 20px;
+    padding: 20px;
+    transition: border-color 200ms;
+  }
+  .hp-route-card:hover { border-color: #bbf7d0; }
+  .hp-route-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .hp-route-dot { width: 7px; height: 7px; border-radius: 50%; background: #e2e8f0; flex-shrink: 0; }
+  .hp-route-dash { flex: 1; border-top: 1.5px dashed #f1f5f9; }
+  .hp-route-from { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 3px; }
+  .hp-route-to   { font-size: 14px; font-weight: 700; color: #16a34a; margin-bottom: 12px; }
+  .hp-route-time {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding-top: 12px;
+    border-top: 1px solid #f8fafc;
+  }
+
+  /* ── CTA ── */
+  .hp-cta { text-align: center; padding: 80px 24px; }
+  .hp-cta-h2 {
+    font-size: clamp(28px, 5vw, 40px);
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+  }
+  .hp-cta-sub {
+    font-size: 14px;
+    font-weight: 500;
+    color: #64748b;
+    margin-bottom: 32px;
+  }
+  .hp-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    background: #0f172a;
+    color: #fff;
+    border: none;
+    border-radius: 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: background 150ms, transform 150ms;
+  }
+  .hp-cta-btn:hover  { background: #16a34a; }
+  .hp-cta-btn:active { transform: scale(0.97); }
+
+  /* Mobile bg image */
+  .hp-mobile-bg {
+    display: block;
+    position: absolute;
+    top: -80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120%;
+    max-width: 500px;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.45;
+    filter: grayscale(1);
+    -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+  }
+  @media (min-width: 1024px) { .hp-mobile-bg { display: none; } }
+`;
+
+let styleInjected = false;
+function injectStyle() {
+  if (styleInjected || typeof document === 'undefined') return;
+  const el = document.createElement('style');
+  el.textContent = STYLE;
+  document.head.appendChild(el);
+  styleInjected = true;
+}
+
+/* ─── PAGE ─────────────────────────────────────────────────────────── */
 export default function Home() {
+  injectStyle();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token   = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
     if (token && userStr) {
       try {
-        const userData = JSON.parse(userStr);
-        router.push(userData.roles?.includes("DRIVER") ? '/dashboard/driver' : '/dashboard/passenger');
-      } catch (e) { setLoading(false); }
-    } else { setLoading(false); }
+        const u = JSON.parse(userStr);
+        router.push(u.roles?.includes('DRIVER') ? '/dashboard/driver' : '/dashboard/passenger');
+        return;
+      } catch {}
+    }
+    setLoading(false);
   }, [router]);
 
-  const handleLoginSuccess = (apiResponse) => {
-    localStorage.setItem("token", apiResponse.access_token);
-    localStorage.setItem("user", JSON.stringify(apiResponse.user));
-    router.push(apiResponse.user.roles?.includes("DRIVER") ? '/dashboard/driver' : '/dashboard/passenger');
+  const handleLoginSuccess = (res) => {
+    localStorage.setItem('token', res.access_token);
+    localStorage.setItem('user', JSON.stringify(res.user));
+    router.push(res.user.roles?.includes('DRIVER') ? '/dashboard/driver' : '/dashboard/passenger');
   };
 
   if (loading) return (
-    <div className="h-screen flex items-center justify-center bg-white">
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-      >
-        <Loader2 className="text-emerald-500" size={32} />
-      </motion.div>
+    <div className="hp-loading" role="status" aria-label="Loading">
+      <Loader2 size={30} color="#34d399" className="hp-spin" />
     </div>
   );
 
   return (
-    <main className="min-h-screen bg-white selection:bg-emerald-100 selection:text-emerald-900 overflow-hidden">
+    <main className="hp-root">
       <Navbar />
 
-      {/* --- 1. HERO SECTION --- */}
-      <section className="relative min-h-[100svh] flex flex-col pt-28 md:pt-36 pb-12 px-6 bg-white overflow-hidden">
-        
-        {/* DESKTOP FULL BACKGROUND (Hidden on mobile) */}
-        <div className="hidden lg:block absolute inset-0 w-full h-[100svh] -z-20 pointer-events-none opacity-20 grayscale">
-          <img 
-            src="https://images.unsplash.com/photo-1554629947-334ff61d85dc?q=80&w=2000&auto=format&fit=crop" 
-            alt="Mountains" 
-            className="w-full h-full object-cover [mask-image:linear-gradient(to_bottom,black_60%,transparent_100%)]"
-          />
-        </div>
+      {/* ── 1. HERO ── */}
+      <section className="hp-hero" aria-label="Hero">
+        <div className="hp-hero-glow" aria-hidden="true" />
 
-        {/* Soft green glow in the background */}
-        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-emerald-50/80 via-white to-transparent blur-3xl -z-10 opacity-70 pointer-events-none" />
+        <div className="hp-hero-grid">
+          {/* Left — text */}
+          <div className="hp-anim-left" style={{ position: 'relative' }}>
+            {/* Mobile bg */}
+            <Image
+              src="/bg.webp"
+              alt=""
+              width={764}
+              height={1019}
+              priority
+              className="hp-mobile-bg"
+              aria-hidden="true"
+            />
 
-        <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start relative z-10 flex-1">
-          
-          {/* LEFT: TEXT SIDE */}
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center lg:text-left space-y-6 md:space-y-8 relative pt-4 lg:pt-8"
-          >
-            {/* MOBILE MOUNTAIN BACKGROUND (Hidden on Desktop) */}
-            <div className="lg:hidden absolute -top-30 left-1/2 -translate-x-1/2 w-[120%] sm:w-[100%] max-w-[500px] -z-10 pointer-events-none opacity-50 grayscale">
-              <img 
-                src="https://images.unsplash.com/photo-1554629947-334ff61d85dc?q=80&w=800&auto=format&fit=crop" 
-                alt="Mountains" 
-                className="w-full h-auto object-cover [mask-image:linear-gradient(to_bottom,black_40%,transparent_100%)]"
-              />
+            <div className="hp-tag">
+              <MapPin size={11} aria-hidden="true" />
+              Gilgit-Baltistan &amp; Twin Cities
             </div>
 
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-[11px] font-bold uppercase tracking-widest border border-emerald-100/50">
-              <MapPin size={12} className="text-emerald-600" />
-              <span>Gilgit-Baltistan & Twin Cities</span>
-            </div>
-            
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-slate-900 leading-[1.1] tracking-tight">
-              Three Ranges. <br className="hidden lg:block" />
-              <span className="text-emerald-500 italic font-serif font-light">One Road.</span>
+            <h1 className="hp-h1">
+              Three Ranges.<br />
+              <span className="hp-h1-em">One Road.</span>
             </h1>
-            
-            <p className="text-slate-500 text-base md:text-lg font-medium max-w-md mx-auto lg:mx-0 leading-relaxed">
-              Welcome to North Ride. Book a safe, comfortable seat across the mountains. Simple travel for everyone.
-            </p>
-          </motion.div>
 
-          {/* RIGHT: FORM SIDE */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="w-full flex justify-center lg:justify-end pb-10 lg:pb-0"
-          >
-            <div className="w-full max-w-[440px] relative">
-              <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-200 rounded-full blur-3xl opacity-30 pointer-events-none" />
-              <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-slate-200 rounded-full blur-3xl opacity-30 pointer-events-none" />
-              
-              <div className="w-full relative z-10">
-                <Auth onLoginSuccess={handleLoginSuccess} />
-              </div>
+            <p className="hp-hero-desc">
+              Book a safe, comfortable seat across the mountains.
+              Simple travel for everyone.
+            </p>
+          </div>
+
+          {/* Right — auth form */}
+          <div className="hp-anim-right">
+            <div className="hp-auth-wrap">
+              <Auth onLoginSuccess={handleLoginSuccess} />
             </div>
-          </motion.div>
+          </div>
         </div>
 
-        {/* Scroll indicator */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.5 }}
-          transition={{ delay: 1, duration: 1 }}
-          className="hidden lg:flex flex-col items-center absolute bottom-8 left-1/2 -translate-x-1/2"
-        >
-          <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-slate-400">Discover More</span>
-          <motion.div
-            animate={{ y: [0, 5, 0] }}
-            transition={{ repeat: Infinity, duration: 2 }}
-          >
-            <ChevronDown size={18} className="text-slate-400 mt-2" />
-          </motion.div>
-        </motion.div>
+        {/* Scroll hint */}
+        <div className="hp-scroll-hint" aria-hidden="true">
+          <span className="hp-scroll-label">Discover More</span>
+          <ChevronDown size={17} className="hp-scroll-arrow" />
+        </div>
       </section>
 
-      {/* --- 2. INFO BOXES (Light Theme) --- */}
-      <section className="relative py-24 bg-slate-50 border-y border-slate-100 z-20">
-        <div className="max-w-6xl mx-auto px-6 md:px-12">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Travel with Confidence</h2>
+      {/* ── 2. FEATURES ── */}
+      <section className="hp-section hp-section--gray" aria-labelledby="features-heading">
+        <div className="hp-inner">
+          <div className="hp-section-center">
+            <h2 id="features-heading" className="hp-section-h2">Travel with confidence</h2>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 lg:gap-16">
-            <FeatureCard 
-              icon={<ShieldCheck size={28} className="text-emerald-600" />}
+          <div className="hp-features-grid">
+            <FeatureCard
+              icon={<ShieldCheck size={24} color="#16a34a" />}
               title="Always Safe"
               desc="We check every driver's ID. Your trip is tracked from start to finish so you can relax."
             />
-            <FeatureCard 
-              icon={<Zap size={28} className="text-emerald-600" />}
+            <FeatureCard
+              icon={<Zap size={24} color="#16a34a" />}
               title="Fixed Prices"
-              desc="You see the price before you book. No bargaining, no hidden fees, just fair rates."
+              desc="You see the price before you book. No bargaining, no hidden fees — just fair rates."
             />
-            <FeatureCard 
-              icon={<Car size={28} className="text-emerald-600" />}
+            <FeatureCard
+              icon={<Car size={24} color="#16a34a" />}
               title="Clean Cars"
               desc="We only allow clean, well-maintained cars with heating and air conditioning."
             />
@@ -157,76 +553,65 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- 3. HOW IT WORKS --- */}
-      <section className="py-24 bg-white">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center gap-16">
-            
-            <div className="flex-1 space-y-8">
+      {/* ── 3. HOW IT WORKS ── */}
+      <section className="hp-section hp-section--white" aria-labelledby="how-heading">
+        <div className="hp-inner">
+          <div className="hp-how-grid">
+            <div className="hp-steps">
               <div>
-                <h2 className="text-[11px] font-bold text-emerald-600 uppercase tracking-widest mb-3">Easy Process</h2>
-                <h3 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight leading-tight">
-                  How to book <br/>your seat.
-                </h3>
+                <p className="hp-eyebrow">How it works</p>
+                <h2 id="how-heading" className="hp-section-h2">Book your seat<br />in 3 steps.</h2>
               </div>
-              
-              <div className="space-y-6">
-                <StepItem number="1" title="Choose your route" text="Tell us where you are and where you want to go." />
-                <StepItem number="2" title="Pick a driver" text="Look at driver ratings and choose the best car for you." />
-                <StepItem number="3" title="Enjoy the ride" text="Meet your driver and travel safely to your destination." />
-              </div>
+              <StepItem n="1" title="Choose your route"  text="Tell us where you are and where you want to go." />
+              <StepItem n="2" title="Pick a driver"      text="Look at driver ratings and choose the best car for you." />
+              <StepItem n="3" title="Enjoy the ride"     text="Meet your driver and travel safely to your destination." />
             </div>
 
-            <div className="flex-1 w-full relative">
-              {/* Minimalist abstract UI representation */}
-              <div className="aspect-square max-w-md mx-auto bg-slate-50 rounded-full border border-slate-100 flex items-center justify-center relative p-8">
-                <div className="w-full h-full rounded-full border border-dashed border-emerald-200 animate-[spin_60s_linear_infinite]" />
-                <div className="absolute inset-0 flex items-center justify-center flex-col gap-4">
-                   <div className="w-16 h-16 bg-white shadow-xl rounded-2xl flex items-center justify-center text-emerald-600">
-                     <MapPin size={32} />
-                   </div>
-                   <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
-                     <div className="w-1/2 h-full bg-emerald-500 rounded-full" />
-                   </div>
+            <div className="hp-visual" aria-hidden="true">
+              <div className="hp-visual-ring" />
+              <div className="hp-visual-center">
+                <div className="hp-visual-icon">
+                  <MapPin size={28} color="#16a34a" />
+                </div>
+                <div className="hp-visual-bar">
+                  <div className="hp-visual-fill" />
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </section>
 
-      {/* --- 4. POPULAR ROUTES --- */}
-      <section className="py-24 bg-slate-50 border-t border-slate-100">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+      {/* ── 4. ROUTES ── */}
+      <section className="hp-section hp-section--gray" aria-labelledby="routes-heading">
+        <div className="hp-inner">
+          <div className="hp-routes-header">
             <div>
-              <h2 className="text-[11px] font-bold text-emerald-600 uppercase tracking-widest mb-3">Where we go</h2>
-              <h3 className="text-3xl font-bold text-slate-900 tracking-tight">Our Top Routes</h3>
+              <p className="hp-eyebrow">Where we go</p>
+              <h2 id="routes-heading" className="hp-section-h2">Our top routes</h2>
             </div>
-            <p className="text-slate-500 font-medium text-sm max-w-xs">
-              We connect the Twin Cities to the highest peaks.
-            </p>
+            <p className="hp-routes-sub">We connect the Twin Cities to the highest peaks.</p>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <RouteCard from="Islamabad/Rawalpindi" to="Gilgit" time="12-14 Hours" />
-            <RouteCard from="Islamabad/Rawalpindi" to="Skardu" time="18-20 Hours" />
-            <RouteCard from="Gilgit" to="Hunza" time="coming soon" />
-            <RouteCard from="Gilgit" to="Skardu" time="coming soon" />
+          <div className="hp-routes-grid">
+            <RouteCard from="Islamabad / Rawalpindi" to="Gilgit"  time="12–14 hrs" />
+            <RouteCard from="Islamabad / Rawalpindi" to="Skardu"  time="18–20 hrs" />
+            <RouteCard from="Gilgit"                 to="Hunza"   time="Coming soon" />
+            <RouteCard from="Gilgit"                 to="Skardu"  time="Coming soon" />
           </div>
         </div>
       </section>
 
-      {/* --- 5. BOTTOM CTA --- */}
-      <section className="py-24 bg-white text-center">
-        <div className="max-w-2xl mx-auto px-6 space-y-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">Ready to travel?</h2>
-          <p className="text-slate-500 font-medium">Create your account today. It takes less than a minute.</p>
-          <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="inline-flex items-center gap-2 px-8 py-4 bg-slate-900 text-white rounded-2xl font-semibold uppercase text-[12px] tracking-wide hover:bg-emerald-600 transition-all active:scale-95 shadow-xl shadow-slate-200">
-            Start Booking <ArrowRight size={16} />
-          </button>
-        </div>
+      {/* ── 5. CTA ── */}
+      <section className="hp-cta" aria-labelledby="cta-heading">
+        <h2 id="cta-heading" className="hp-cta-h2">Ready to travel?</h2>
+        <p className="hp-cta-sub">Create your account today. It takes less than a minute.</p>
+        <button
+          className="hp-cta-btn"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Scroll to top to sign up"
+        >
+          Start booking <ArrowRight size={15} aria-hidden="true" />
+        </button>
       </section>
 
       <Footer />
@@ -234,36 +619,24 @@ export default function Home() {
   );
 }
 
-// --- HELPERS ---
-
+/* ─── SUB-COMPONENTS ───────────────────────────────────────────────── */
 function FeatureCard({ icon, title, desc }) {
   return (
-    <motion.div 
-      whileHover={{ y: -5 }}
-      className="flex flex-col items-center text-center md:items-start md:text-left group bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-emerald-900/5 transition-all duration-300"
-    >
-      <div className="mb-6 w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center transition-colors group-hover:bg-emerald-50 group-hover:scale-110 duration-300">
-        {icon}
-      </div>
-      <h3 className="text-[15px] font-bold mb-3 uppercase tracking-wider text-slate-900">
-        {title}
-      </h3>
-      <p className="text-slate-500 text-sm leading-relaxed font-medium">
-        {desc}
-      </p>
-    </motion.div>
+    <div className="hp-feature-card">
+      <div className="hp-feature-icon" aria-hidden="true">{icon}</div>
+      <h3 className="hp-feature-title">{title}</h3>
+      <p className="hp-feature-desc">{desc}</p>
+    </div>
   );
 }
 
-function StepItem({ number, title, text }) {
+function StepItem({ n, title, text }) {
   return (
-    <div className="flex gap-6">
-      <div className="w-10 h-10 shrink-0 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 font-bold text-sm">
-        {number}
-      </div>
+    <div className="hp-step">
+      <div className="hp-step-num" aria-hidden="true">{n}</div>
       <div>
-        <h4 className="text-lg font-bold text-slate-900 mb-1">{title}</h4>
-        <p className="text-slate-500 text-sm font-medium">{text}</p>
+        <h3 className="hp-step-title">{title}</h3>
+        <p className="hp-step-text">{text}</p>
       </div>
     </div>
   );
@@ -271,20 +644,15 @@ function StepItem({ number, title, text }) {
 
 function RouteCard({ from, to, time }) {
   return (
-    <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:border-emerald-200 transition-colors group">
-      <div className="flex items-center justify-between mb-6">
-        <div className="w-2 h-2 rounded-full bg-slate-300" />
-        <div className="flex-1 border-t border-dashed border-slate-200 mx-2" />
-        <MapPin size={16} className="text-emerald-500" />
+    <div className="hp-route-card">
+      <div className="hp-route-line" aria-hidden="true">
+        <span className="hp-route-dot" />
+        <span className="hp-route-dash" />
+        <MapPin size={14} color="#34d399" />
       </div>
-      <div className="space-y-1">
-        <h4 className="font-bold text-slate-900 text-lg">{from}</h4>
-        <p className="text-sm font-medium text-slate-400">to</p>
-        <h4 className="font-bold text-emerald-600 text-lg">{to}</h4>
-      </div>
-      <div className="mt-6 pt-4 border-t border-slate-50 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-        Est. Time: {time}
-      </div>
+      <p className="hp-route-from">{from}</p>
+      <p className="hp-route-to">{to}</p>
+      <p className="hp-route-time">Est. {time}</p>
     </div>
   );
 }

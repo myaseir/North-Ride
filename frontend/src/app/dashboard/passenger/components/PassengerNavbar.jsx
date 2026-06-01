@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { playPopSound } from '../../../utils/sounds';
 import { useRouter } from 'next/navigation';
-
+import Image from 'next/image';
 export default function PassengerNavbar({ onOpenHistory, activeTab }) {
   const [showProfile, setShowProfile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -81,7 +81,7 @@ export default function PassengerNavbar({ onOpenHistory, activeTab }) {
             onClick={() => router.push('/dashboard/passenger')}
           >
             <img 
-              src="/logo.png" 
+              src="/logo.webp" 
               alt="North Ride" 
               className="h-10 md:h-12 w-auto object-contain transition-transform duration-300 hover:scale-110 active:scale-95" 
             />
@@ -185,7 +185,14 @@ export default function PassengerNavbar({ onOpenHistory, activeTab }) {
         }`}>
           <div className="flex flex-col h-full p-6">
             <div className="flex justify-between items-center mb-8">
-              <img src="/logo.png" alt="Logo" className="h-10 w-auto" />
+              <Image 
+  src="/logo.webp" 
+  alt="NorthRide Logo" 
+  width={112}        // 🎯 Sets explicit layout proportions to eliminate layout shifts
+  height={32}        // 🎯 Matches your exact h-8 rendering aspect ratio context
+  priority           // 🎯 Forces early browser preloading to secure a perfect LCP speed index
+  className="h-8 w-auto object-contain"
+/>
               <button onClick={() => setIsMobileMenuOpen(false)} className="p-3 bg-slate-100 rounded-full"><X size={24} /></button>
             </div>
 

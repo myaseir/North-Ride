@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { playPopSound } from '../utils/sounds';
-
+import Image from 'next/image';
 // --- SUB-COMPONENTS ---
 import DriverSignup from './DriverSignup';
 import PassengerSignup from './PassengerSignup'; 
@@ -117,11 +117,14 @@ export default function Auth({ onLoginSuccess }) {
         {/* BRANDING HEADER */}
         <div className="pt-8 pb-6 px-6 md:px-10 flex flex-col items-center text-center">
           <div className="mb-6 w-full flex justify-center">
-            <img 
-              src="/logo.png" 
-              alt="NorthRide Logo" 
-              className="w-28 sm:w-32 h-auto object-contain" 
-            />
+           <Image 
+  src="/logo.webp" 
+  alt="NorthRide Logo" 
+  width={112}        // 🎯 Sets explicit layout proportions to eliminate layout shifts
+  height={32}        // 🎯 Matches your exact h-8 rendering aspect ratio context
+  priority           // 🎯 Forces early browser preloading to secure a perfect LCP speed index
+  className="h-8 w-auto object-contain"
+/>
           </div>
 
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">

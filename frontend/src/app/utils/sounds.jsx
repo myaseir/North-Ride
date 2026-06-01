@@ -5,7 +5,7 @@ let popInstance = null;
 let isAudioUnlocked = false;
 
 if (typeof window !== 'undefined') {
-  popInstance = new Audio('https://raw.githubusercontent.com/myaseir/brain-buffer-assets/main/pop.mp3');
+  popInstance = new Audio('/pop.mp3');
   popInstance.crossOrigin = "anonymous";
   popInstance.preload = "auto";
   popInstance.volume = 0.4;

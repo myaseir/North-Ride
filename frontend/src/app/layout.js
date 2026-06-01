@@ -1,22 +1,28 @@
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
+import { DM_Sans } from 'next/font/google'; // 🎯 NEW: High-performance font preloading layout configuration
 import MaintenanceGuard from "./guards/MaintenanceGuard";
 import UpdateGuard from "./guards/UpdateGuard";
+
+// Configure DM Sans to load natively from the Vercel Edge Server without blocking rendering layout layers
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '900'],
+  display: 'swap', // Ensures text remains visible instantly using fallback layout during initial paint
+  variable: '--font-dm-sans', // Injects as a native global CSS variable
+});
 
 // 1. ADVANCED SEO FOR PAKISTAN & INTERNATIONAL TOURISTS
 export const metadata = {
   metadataBase: new URL('https://northride.com'),
   title: {
-    // "Three Ranges. One Road." is your branding, but we lead with "Car Booking" for SEO
     default: "North Ride | Car Booking & Rental: Three Ranges. One Road.",
     template: "%s | North Ride"
   },
   description: "Book premium cars & private transfers across the Karakoram, Himalayas, and Hindu Kush. Reliable transport for Gilgit, Skardu, Hunza, and Islamabad travelers.",
   keywords: [
-    // Local High-Volume Keywords
     "rent a car in Gilgit", "car booking Skardu", "Hunza transport service", 
     "Islamabad to Gilgit car", "Rawalpindi to Skardu car rent", "rent a car in Rawalpindi",
-    // Tourist & Professional Keywords
     "Karakoram Highway car rental", "safe tourist transport Pakistan", 
     "North Pakistan road trip", "luxury car rental Islamabad", "North Ride Pakistan"
   ],
@@ -48,11 +54,12 @@ export const metadata = {
   },
 };
 
+// 🎯 FIXES ACCESSIBILITY BOTTLENECK: Allow mobile user scaling natively
 export const viewport = {
   themeColor: "#059669", 
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  // maximumScale: 1 is completely removed here to allow smooth pinch-to-zoom accessibility compliance
 };
 
 export default function RootLayout({ children }) {
@@ -63,7 +70,7 @@ export default function RootLayout({ children }) {
     "name": "North Ride",
     "description": "Premium car booking and rental service for the Karakoram, Himalayas, and Hindu Kush ranges.",
     "url": "https://northride.com",
-    "telephone": "+923000000000", // Add your real business number here
+    "telephone": "+923000000000", 
     "priceRange": "$$",
     "areaServed": [
       { "@type": "City", "name": "Gilgit" },
@@ -93,7 +100,8 @@ export default function RootLayout({ children }) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="antialiased bg-white text-slate-900 selection:bg-emerald-100 selection:text-emerald-900">
+      {/* 🎯 THE CRITICAL FONT FIX: Inject dmSans.variable so Tailwind v4 global.css can read the --font-dm-sans configuration */}
+      <body className={`${dmSans.variable} font-sans antialiased bg-white text-slate-900 selection:bg-emerald-100 selection:text-emerald-900`}>
         <UpdateGuard>
           <MaintenanceGuard>
             {children}

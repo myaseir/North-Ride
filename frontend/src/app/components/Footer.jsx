@@ -6,7 +6,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-
+import Image from 'next/image';
 export default function Footer() {
   const router = useRouter();
   const currentYear = new Date().getFullYear();
@@ -22,11 +22,14 @@ export default function Footer() {
           {/* BRAND SECTION */}
           <div className="lg:col-span-4 space-y-6">
             <div className="flex flex-col gap-4">
-              <img 
-                src="/logo.png" 
-                alt="North Ride" 
-                className="h-8 md:h-10 w-auto object-contain self-start transition-transform hover:scale-105" 
-              />
+            <Image 
+  src="/logo.webp" 
+  alt="North Ride Logo" 
+  width={140}          // 🎯 Provides explicit base dimension width
+  height={40}          // 🎯 Matches the maximum aspect ratio constraint (h-10 / 40px)
+  loading="lazy"       // 🎯 Optimizes initial page load speed by lazy-loading below-the-fold footer assets
+  className="h-8 md:h-10 w-auto object-contain self-start transition-transform duration-200 hover:scale-105" 
+/>
               <p className="text-slate-500 text-sm leading-relaxed max-w-xs font-medium">
                 Making travel in the North simple and safe. Reliable rides for everyone.
               </p>

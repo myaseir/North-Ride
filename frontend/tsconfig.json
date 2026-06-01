@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "ES2022", /* 🎯 OPTIMIZATION: Updated from ES2017 to match your modern React 19 / Next.js 16 stack */
     "lib": [
       "dom",
       "dom.iterable",
@@ -13,7 +13,11 @@
     "incremental": true,
     "module": "esnext",
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    
+    /* 🎯 THE FIX: Switch from "node" to "bundler" to eliminate the deprecation warning */
+    "moduleResolution": "bundler", 
+    "allowImportingTsExtensions": true, /* Resolves modern bundler file extension rules */
+    
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",

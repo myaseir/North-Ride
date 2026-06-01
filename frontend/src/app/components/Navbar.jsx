@@ -8,7 +8,7 @@ import {
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion'; // Recommended for professional feel
-
+import Image from 'next/image';
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -48,11 +48,14 @@ export default function Navbar() {
             
             {/* Branding */}
             <Link href="/" className="relative z-10 flex items-center shrink-0">
-              <img 
-                src="/logo.png" 
-                alt="Logo" 
-                className="h-8 md:h-9 w-auto transition-transform hover:scale-105" 
-              />
+             <Image 
+  src="/logo.webp" 
+  alt="NorthRide Logo" 
+  width={112}        // 🎯 Sets explicit layout proportions to eliminate layout shifts
+  height={32}        // 🎯 Matches your exact h-8 rendering aspect ratio context
+  priority           // 🎯 Forces early browser preloading to secure a perfect LCP speed index
+  className="h-8 w-auto object-contain"
+/>
             </Link>
 
             {/* Desktop Links */}
@@ -103,7 +106,7 @@ export default function Navbar() {
             className="fixed inset-0 z-[110] bg-white flex flex-col p-6"
           >
             <div className="flex justify-between items-center h-16 mb-8">
-              <img src="/logo.png" alt="Logo" className="h-8 w-auto" />
+              <img src="/logo.webp" alt="Logo" className="h-8 w-auto" />
               <button 
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 bg-slate-50 rounded-full text-slate-900"

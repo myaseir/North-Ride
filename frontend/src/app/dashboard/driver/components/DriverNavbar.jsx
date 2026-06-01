@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { playPopSound } from '../../../utils/sounds';
 import { useRouter } from 'next/navigation';
-
+import Image from 'next/image';
 export default function DriverNavbar({ user, onOpenPayments, totalEarnings = 0 }) {
   const [showProfile, setShowProfile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -57,7 +57,14 @@ export default function DriverNavbar({ user, onOpenPayments, totalEarnings = 0 }
             className="flex items-center cursor-pointer transition-transform active:scale-95" 
             onClick={() => router.push('/dashboard/driver')}
           >
-            <img src="/logo.png" alt="Logo" className="h-8 md:h-10 w-auto object-contain" />
+            <Image 
+  src="/logo.webp" 
+  alt="NorthRide Logo" 
+  width={112}        // 🎯 Sets explicit layout proportions to eliminate layout shifts
+  height={32}        // 🎯 Matches your exact h-8 rendering aspect ratio context
+  priority           // 🎯 Forces early browser preloading to secure a perfect LCP speed index
+  className="h-8 w-auto object-contain"
+/>
           </div>
 
           {/* RIGHT: Actions */}
