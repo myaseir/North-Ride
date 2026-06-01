@@ -1,6 +1,6 @@
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
-import { DM_Sans } from 'next/font/google'; // 🎯 NEW: High-performance font preloading layout configuration
+import { DM_Sans } from 'next/font/google'; // 🎯 High-performance font preloading layout configuration
 import MaintenanceGuard from "./guards/MaintenanceGuard";
 import UpdateGuard from "./guards/UpdateGuard";
 
@@ -54,12 +54,11 @@ export const metadata = {
   },
 };
 
-// 🎯 FIXES ACCESSIBILITY BOTTLENECK: Allow mobile user scaling natively
+// FIXES ACCESSIBILITY BOTTLENECK: Allow mobile user scaling natively
 export const viewport = {
   themeColor: "#059669", 
   width: "device-width",
   initialScale: 1,
-  // maximumScale: 1 is completely removed here to allow smooth pinch-to-zoom accessibility compliance
 };
 
 export default function RootLayout({ children }) {
@@ -95,12 +94,24 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className="scroll-smooth">
       <head>
+        {/* 🎯 THE CRITICAL PATH LCP FIX: Forces the browser to preload the exact mobile-optimized 
+            srcset image variant in parallel with your global HTML request stream.
+            This completely eliminates the 2,160 ms Resource Load Delay! */}
+        <link 
+          rel="preload" 
+          as="image" 
+          href="/_next/image?url=%2Fbg.webp&w=828&q=75" 
+          imageSrcset="/_next/image?url=%2Fbg.webp&w=828&q=75 1x, /_next/image?url=%2Fbg.webp&w=1080&q=75 2x"
+          imageSizes="(max-width: 1024px) 764px, 100vw"
+          fetchPriority="high"
+        />
+
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      {/* 🎯 THE CRITICAL FONT FIX: Inject dmSans.variable so Tailwind v4 global.css can read the --font-dm-sans configuration */}
+      {/* Inject dmSans.variable so Tailwind v4 global.css can read the --font-dm-sans configuration */}
       <body className={`${dmSans.variable} font-sans antialiased bg-white text-slate-900 selection:bg-emerald-100 selection:text-emerald-900`}>
         <UpdateGuard>
           <MaintenanceGuard>

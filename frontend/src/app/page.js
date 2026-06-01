@@ -486,15 +486,18 @@ export default function Home() {
           {/* Left — text */}
           <div className="hp-anim-left" style={{ position: 'relative' }}>
             {/* Mobile bg */}
-            <Image
-              src="/bg.webp"
-              alt=""
-              width={764}
-              height={1019}
-              priority
-              className="hp-mobile-bg"
-              aria-hidden="true"
-            />
+  <Image
+  src="/bg.webp"
+  alt="Karakoram Mountains Background"
+  width={764}
+  height={1019}
+  priority={true}                 // 🎯 Explicitly forces Next.js to treat this asset as crucial
+  fetchPriority="high"            // 🎯 THE FIX: Tells the browser's preload engine to run this file first
+  loading="eager"                 // 🎯 THE FIX: Hard-forces lazy-loading mechanics OFF for this element
+  aria-hidden="true"
+  className="hp-mobile-bg"
+  sizes="(max-width: 1024px) 764px, 100vw" 
+/>
 
             <div className="hp-tag">
               <MapPin size={11} aria-hidden="true" />
@@ -605,13 +608,22 @@ export default function Home() {
       <section className="hp-cta" aria-labelledby="cta-heading">
         <h2 id="cta-heading" className="hp-cta-h2">Ready to travel?</h2>
         <p className="hp-cta-sub">Create your account today. It takes less than a minute.</p>
-        <button
-          className="hp-cta-btn"
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          aria-label="Scroll to top to sign up"
-        >
-          Start booking <ArrowRight size={15} aria-hidden="true" />
-        </button>
+       <button 
+      onClick={() => {
+        // 🎯 THE FORCED REFLOW FIX: 
+        // We defer the geometric scroll routine to requestAnimationFrame. 
+        // This lets the browser finish all active style paints and layout calculations 
+        // before executing the smooth positioning mechanics.
+        if (typeof window !== "undefined") {
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+        }
+      }} 
+      className="inline-flex items-center gap-2 px-8 py-4 bg-slate-900 hover:bg-emerald-600 text-white rounded-2xl font-semibold uppercase text-[12px] tracking-wide transition-all active:scale-95 shadow-xl shadow-slate-200 duration-150"
+    >
+      Start Booking <ArrowRight size={16} />
+    </button>
       </section>
 
       <Footer />

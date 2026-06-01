@@ -8,8 +8,8 @@
   --shadow-premium: 0 20px 40px rgba(15, 23, 42, 0.05);
   
   /* 🎯 THE FIX: Inherit the dynamic variable from Next.js Font preloader */
-  /* This completely eliminates the render-blocking search for "Inter" */
-  --font-sans: var(--font-dm-sans), "Inter", sans-serif;
+  /* This completely eliminates the render-blocking external network search */
+  --font-sans: var(--font-dm-sans), sans-serif;
 }
 
 @layer base {
