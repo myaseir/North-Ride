@@ -13,14 +13,10 @@ import {
 
 /* ─── STYLES ───────────────────────────────────────────────────────── */
 const STYLE = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@1&display=swap');
-
+ 
   .hp-root * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
   .hp-root {
-    font-family: 'DM Sans', sans-serif;
-    min-height: 100vh;
-    background: #fff;
-    overflow-x: hidden;
+    font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
   }
 
   /* ── Fade-in animations (CSS only, no framer-motion) ── */
@@ -125,7 +121,7 @@ const STYLE = `
     font-style: italic;
     font-weight: 300;
     color: #16a34a;
-    font-family: 'DM Serif Display', Georgia, serif;
+    font-family: var(--font-dm-serif), 'DM Serif Display', Georgia, serif;
   }
 
   .hp-hero-desc {
