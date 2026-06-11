@@ -1,26 +1,24 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-primary: #10b981;    /* Emerald 500 */
-  --color-brand-dark: #0f172a;       /* Slate 900 */
-  --color-brand-surface: #f8fafc;    /* Slate 50 */
-  
+  --color-brand-primary: #10b981;
+  --color-brand-dark: #0f172a;
+  --color-brand-surface: #f8fafc;
   --shadow-premium: 0 20px 40px rgba(15, 23, 42, 0.05);
-  
-  /* 🎯 THE FIX: Inherit the dynamic variable from Next.js Font preloader */
-  /* This completely eliminates the render-blocking external network search */
-  --font-sans: var(--font-dm-sans), sans-serif;
+  --font-sans: var(--font-dm-sans), 'DM Sans', sans-serif;
+  --font-serif: var(--font-dm-serif), 'DM Serif Display', serif; /* ← add this */
 }
 
-@layer base {
-  body {
-    background-color: var(--color-brand-surface);
-    color: #0f172a;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    margin: 0;
-    min-height: 100dvh;
-  }
+/* Keep only what Tailwind v4 doesn't already reset */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  background-color: #fff;           /* match page.js */
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  min-height: 100dvh;
 }
 
 @utility card-glass {
