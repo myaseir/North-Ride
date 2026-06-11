@@ -479,56 +479,61 @@ export default function Home() {
       <Navbar />
 
       {/* ── 1. HERO ── */}
-      <section className="hp-hero" aria-label="Hero">
-        <div className="hp-hero-glow" aria-hidden="true" />
+    <section className="hp-hero" aria-label="Hero">
+  <div className="hp-hero-glow" aria-hidden="true" />
 
-        <div className="hp-hero-grid">
-          {/* Left — text */}
-          <div className="hp-anim-left" style={{ position: 'relative' }}>
-            {/* Mobile bg */}
-  <Image
-  src="/bg.webp"
-  alt="Karakoram Mountains Background"
-  width={764}
-  height={1019}
-  priority={true}                 // 🎯 Explicitly forces Next.js to treat this asset as crucial
-  fetchPriority="high"            // 🎯 THE FIX: Tells the browser's preload engine to run this file first
-  loading="eager"                 // 🎯 THE FIX: Hard-forces lazy-loading mechanics OFF for this element
-  aria-hidden="true"
-  className="hp-mobile-bg"
-  sizes="(max-width: 1024px) 764px, 100vw" 
-/>
+  <div className="hp-hero-grid">
+    {/* Left — text */}
+    <div className="hp-anim-left" style={{ position: 'relative' }}>
+      
+      {/* 🎯 THE FIX: Wrapped in a container that forces standard display matching.
+          'lg:hidden' hard-stops the browser engine from rendering this block on laptop resolutions.
+          The width, height, and properties remain completely untouched to save your asset metrics! */}
+      <div className="block lg:hidden">
+        <Image
+          src="/bg.webp"
+          alt="Karakoram Mountains Background"
+          width={764}
+          height={1019}
+          priority={true}                 
+          fetchPriority="high"            
+          loading="eager"                 
+          aria-hidden="true"
+          className="hp-mobile-bg"
+          sizes="(max-width: 1024px) 100vw, 1px" // Tells the browser that on laptop sizes, the width drops to zero pixels
+        />
+      </div>
 
-            <div className="hp-tag">
-              <MapPin size={11} aria-hidden="true" />
-              Gilgit-Baltistan &amp; Twin Cities
-            </div>
+      <div className="hp-tag">
+        <MapPin size={11} aria-hidden="true" />
+        Gilgit-Baltistan &amp; Twin Cities
+      </div>
 
-            <h1 className="hp-h1">
-              Three Ranges.<br />
-              <span className="hp-h1-em">One Road.</span>
-            </h1>
+      <h1 className="hp-h1">
+        Three Ranges.<br />
+        <span className="hp-h1-em">One Road.</span>
+      </h1>
 
-            <p className="hp-hero-desc">
-              Book a safe, comfortable seat across the mountains.
-              Simple travel for everyone.
-            </p>
-          </div>
+      <p className="hp-hero-desc">
+        Book a safe, comfortable seat across the mountains.
+        Simple travel for everyone.
+      </p>
+    </div>
 
-          {/* Right — auth form */}
-          <div className="hp-anim-right">
-            <div className="hp-auth-wrap">
-              <Auth onLoginSuccess={handleLoginSuccess} />
-            </div>
-          </div>
-        </div>
+    {/* Right — auth form */}
+    <div className="hp-anim-right">
+      <div className="hp-auth-wrap">
+        <Auth onLoginSuccess={handleLoginSuccess} />
+      </div>
+    </div>
+  </div>
 
-        {/* Scroll hint */}
-        <div className="hp-scroll-hint" aria-hidden="true">
-          <span className="hp-scroll-label">Discover More</span>
-          <ChevronDown size={17} className="hp-scroll-arrow" />
-        </div>
-      </section>
+  {/* Scroll hint */}
+  <div className="hp-scroll-hint" aria-hidden="true">
+    <span className="hp-scroll-label">Discover More</span>
+    <ChevronDown size={17} className="hp-scroll-arrow" />
+  </div>
+</section>
 
       {/* ── 2. FEATURES ── */}
       <section className="hp-section hp-section--gray" aria-labelledby="features-heading">

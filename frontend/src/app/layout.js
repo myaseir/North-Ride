@@ -94,18 +94,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className="scroll-smooth">
       <head>
-        {/* 🎯 THE CRITICAL PATH LCP FIX: Forces the browser to preload the exact mobile-optimized 
-            srcset image variant in parallel with your global HTML request stream.
-            This completely eliminates the 2,160 ms Resource Load Delay! */}
-        <link 
-          rel="preload" 
-          as="image" 
-          href="/_next/image?url=%2Fbg.webp&w=828&q=75" 
-          imageSrcset="/_next/image?url=%2Fbg.webp&w=828&q=75 1x, /_next/image?url=%2Fbg.webp&w=1080&q=75 2x"
-          imageSizes="(max-width: 1024px) 764px, 100vw"
-          fetchPriority="high"
-        />
-
+        {/* 🎯 THE FIX: Manual image preload removed to avoid conflict with responsive mobile scaling rules */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
