@@ -1,25 +1,19 @@
+const bundleAnalyzer = require('@next/bundle-analyzer');
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: true,
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
 
-  experimental: {
-    optimizeCss: true,       // ← the render-blocking fix
-  },
-
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'res.cloudinary.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-        pathname: '/**',
-      },
+      { protocol: 'https', hostname: 'res.cloudinary.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'images.unsplash.com', pathname: '/**' },
     ],
   },
 
@@ -28,4 +22,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;   // safer default unless you have "type":"module"
+module.exports = withBundleAnalyzer(nextConfig);

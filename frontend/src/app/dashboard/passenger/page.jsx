@@ -4,15 +4,23 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Search, Compass } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import dynamic from 'next/dynamic';
+const PassengerNavbar          = dynamic(() => import('./components/PassengerNavbar'));
+const RideSearch               = dynamic(() => import('./components/RideSearch'),               { loading: () => <PageLoader /> });
+const PassengerTripCard        = dynamic(() => import('./components/PassengerTripCard'),        { loading: () => <PageLoader /> });
+const PassengerActivitySidebar = dynamic(() => import('./components/PassengerActivitySidebar'), { loading: () => <PageLoader /> });
+const PassengerRecentRides     = dynamic(() => import('./components/PassengerRecentRides'),     { loading: () => <PageLoader /> });
+const ReferralWidget           = dynamic(() => import('./components/ReferralWidget'),           { loading: () => <PageLoader /> });
+const ActiveTripStatus         = dynamic(() => import('./components/ActiveTripStatus'),         { loading: () => <PageLoader /> });
+const RatingPopup              = dynamic(() => import('./components/RatingPopup'));
 
-import PassengerNavbar from './components/PassengerNavbar';
-import RideSearch from './components/RideSearch';
-import PassengerTripCard from './components/PassengerTripCard';
-import PassengerActivitySidebar from './components/PassengerActivitySidebar';
-import PassengerRecentRides from './components/PassengerRecentRides';
-import ReferralWidget from './components/ReferralWidget';
-import ActiveTripStatus from './components/ActiveTripStatus';
-import RatingPopup from './components/RatingPopup';
+function PageLoader() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+      <Loader2 size={24} color="#10b981" style={{ animation: 'spin 1s linear infinite' }} />
+    </div>
+  );
+}
 
 export default function PassengerDashboard() {
   const router = useRouter();
@@ -228,7 +236,7 @@ const handleRatingSubmit = useCallback(async (payload) => {
       </div>
     );
   }
-console.log("🕵️‍♂️ MY FULL USER OBJECT:", user);
+
   return (
     <div className="min-h-screen bg-[#F8FAFB] pb-12 selection:bg-emerald-100">
       <PassengerNavbar onOpenHistory={() => setSidebarOpen(true)} activeTab="search" />

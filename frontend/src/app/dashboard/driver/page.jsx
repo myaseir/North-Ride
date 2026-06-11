@@ -7,17 +7,24 @@ import {
   RefreshCw, Loader2, AlertCircle 
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-
+import dynamic from 'next/dynamic';
 // Sub-components
-import DriverNavbar from './components/DriverNavbar';
-import TripPublisher from './components/TripPublisher';
-import DriverTripCard from './components/DriverTripCard';
+const DriverManifest = dynamic(() => import('./components/DriverManifest'));
+const DriverNavbar    = dynamic(() => import('./components/DriverNavbar'));
+const TripPublisher   = dynamic(() => import('./components/TripPublisher'),   { loading: () => <PageLoader /> });
+const DriverTripCard  = dynamic(() => import('./components/DriverTripCard'),  { loading: () => <PageLoader /> });
+const DriverSidebar   = dynamic(() => import('./components/DriverSidebar'),   { loading: () => <PageLoader /> });
+const SedanCabinManager = dynamic(() => import('./components/DriverAdmin'),   { loading: () => <PageLoader /> });
+const RecentRides     = dynamic(() => import('./components/RecentRides'),     { loading: () => <PageLoader /> });
+const DriverReviews   = dynamic(() => import('./components/DriverReviews'),   { loading: () => <PageLoader /> });
 
-import DriverSidebar from './components/DriverSidebar'; 
-import SedanCabinManager from './components/DriverAdmin'; 
-import RecentRides from './components/RecentRides';
-import DriverReviews from './components/DriverReviews';
-import DriverManifest from './components/DriverManifest';
+function PageLoader() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+      <Loader2 size={24} color="#10b981" style={{ animation: 'spin 1s linear infinite' }} />
+    </div>
+  );
+}
 
 export default function DriverDashboard() {
   const router = useRouter();
@@ -251,7 +258,7 @@ const handleEndTrip = async (tripId) => {
         onClose={() => setActivePanel(null)} 
       />
 
-      <main className="max-w-7xl mx-auto mt-8 px-4 md:px-8 grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-700">
+     <main className="max-w-7xl mx-auto mt-8 px-4 md:px-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* LEFT COLUMN: Controls & Cabin Visualizer */}
         <div className="lg:col-span-4 space-y-6">
@@ -326,7 +333,7 @@ const handleEndTrip = async (tripId) => {
 
     {/* 🎯 CONDITIONAL MANIFEST */}
     {showManifest && (
-      <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+      <div className="transition-all duration-500">
         <DriverManifest passengers={t.passengers || []} />
       </div>
     )}
