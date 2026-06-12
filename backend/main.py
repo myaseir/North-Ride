@@ -32,9 +32,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="GlaciaGo API", lifespan=lifespan)
 
 # --- MIDDLEWARE ---
+# --- MIDDLEWARE ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    # 🎯 FIX: Replace "*" with your actual Vercel domain
+    allow_origins=["https://north-ride-ur4q.vercel.app", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
