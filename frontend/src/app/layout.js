@@ -60,6 +60,15 @@ export const metadata = {
       'max-image-preview': 'large',
     },
   },
+
+  // 🎯 THE PERFORMANCE FIX: Preconnect links compiled cleanly via standard raw configuration mapping
+  other: {
+    preconnect: [
+      "https://north-ride-ur4q.vercel.app", // Wards off connection latency for primary assets
+      "https://res.cloudinary.com",        // Warms up Cloudinary for rapid vehicle/route image painting
+      "https://images.unsplash.com"        // Pre-resolves any placeholder or blog typography banners
+    ]
+  }
 };
 
 // FIXES ACCESSIBILITY BOTTLENECK: Allow mobile user scaling natively

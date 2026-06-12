@@ -11,6 +11,8 @@ import {
   Zap, ChevronDown, Car, ArrowRight
 } from 'lucide-react';
 
+export const dynamic = 'force-static';
+
 export default function Home() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);

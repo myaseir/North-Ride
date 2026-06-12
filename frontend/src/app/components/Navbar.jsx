@@ -44,7 +44,17 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className={`flex items-center justify-between transition-all duration-300 rounded-full border border-transparent ${scrolled ? 'bg-white/80 backdrop-blur-md shadow-sm border-slate-200/50 px-6 h-14' : 'bg-transparent h-16 px-2'}`}>
             <Link href="/" className="relative z-10 flex items-center shrink-0">
-              <Image src="/logo.webp" alt="NorthRide Logo" width={112} height={32} priority className="h-8 w-auto object-contain" />
+             <Image 
+  src="/logo.webp"
+  alt="NorthRide Logo" 
+  width={112} 
+  height={32}
+  className="h-8 w-auto object-contain"
+  priority={true}           // Instructs Next.js to inject a preload link tag into the HTML document header
+  fetchPriority="high"     // Forces Chrome to download this asset before other low-priority network streams
+  loading="eager"          // Forces the browser to immediately pull the asset without waiting for scroll checks
+  decoding="sync"          // Decodes synchronously to minimize initial canvas blank space layout shifts
+/>
             </Link>
 
             <div className="hidden md:flex items-center gap-1">
