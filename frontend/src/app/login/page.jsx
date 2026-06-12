@@ -2,8 +2,9 @@
 import { useEffect, useState } from 'react';
 import Auth from "../components/Auth";
 import { useRouter } from "next/navigation";
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -42,7 +43,6 @@ export default function LoginPage() {
       if (isApproved) {
         router.replace("/dashboard/driver");
       } else {
-        // Redirect to a 'Pending' page or stay here and show toast
         toast.error("Your Driver application is still under review.");
         setChecking(false); 
       }
@@ -90,8 +90,24 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F9FBF9]">
-      <Auth onLoginSuccess={handleLoginSuccess} />
+    <div className="min-h-screen bg-[#F9FBF9] relative flex flex-col justify-center items-center px-4">
+      
+      {/* 🎯 BACK TO HOME BUTTON */}
+      <div className="absolute top-6 left-6 z-50">
+        <Link 
+          href="/" 
+          className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 hover:text-emerald-600 rounded-full text-[13px] font-semibold tracking-wide border border-slate-200/60 shadow-sm active:scale-95 transition-all duration-150 group"
+        >
+          <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform duration-150" />
+          <span>Back to Home</span>
+        </Link>
+      </div>
+
+      {/* Main Container for Auth Card Component */}
+      <div className="w-full max-w-md relative z-10 pt-16 sm:pt-0">
+        <Auth onLoginSuccess={handleLoginSuccess} />
+      </div>
+
     </div>
   );
 }

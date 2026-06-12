@@ -69,7 +69,7 @@ export default function Navbar() {
               <Link href="/login" className="hidden sm:block px-4 py-2 text-[13px] font-medium text-slate-600 hover:text-emerald-600 transition-colors">
                 Log In
               </Link>
-              <Link href="/signup" className="flex items-center gap-2 px-5 py-2 bg-slate-900 text-white rounded-full text-[13px] font-medium hover:bg-emerald-600 transition-all active:scale-95">
+              <Link href="/login" className="flex items-center gap-2 px-5 py-2 bg-slate-900 text-white rounded-full text-[13px] font-medium hover:bg-emerald-600 transition-all active:scale-95">
                 <span>Join Now</span>
                 <ArrowRight size={14} className="hidden sm:inline" />
               </Link>
@@ -109,7 +109,7 @@ export default function Navbar() {
             <Link href="/login" className="block w-full py-4 bg-slate-50 text-slate-900 text-center rounded-2xl font-semibold text-sm border border-slate-100 active:scale-[0.98] transition-transform">
               Login
             </Link>
-            <Link href="/signup" className="block w-full py-4 bg-emerald-600 text-white text-center rounded-2xl font-semibold text-sm shadow-md active:scale-[0.98] transition-transform">
+            <Link href="/login" className="block w-full py-4 bg-emerald-600 text-white text-center rounded-2xl font-semibold text-sm shadow-md active:scale-[0.98] transition-transform">
               Create Account
             </Link>
           </div>
