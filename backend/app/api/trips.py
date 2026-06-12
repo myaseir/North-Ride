@@ -164,7 +164,7 @@ async def modify_trip_fare(
     return {"status": "success", "message": f"Trip fare updated to {payload.new_price} successfully."}
 
 
-# --- PASSENGER ENDPOINTS ---
+# --- PASSENGER ENDPOINTS ----
 
 @router.get("/search")
 async def search_trips(
