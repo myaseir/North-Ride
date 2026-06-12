@@ -153,11 +153,11 @@ export default function DriverNavbar({ user, onOpenPayments, totalEarnings = 0 }
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             
             {/* Earnings Card */}
-            <div className="bg-slate-900 p-6 rounded-2xl text-white shadow-xl relative overflow-hidden">
+            {/* <div className="bg-slate-900 p-6 rounded-2xl text-white shadow-xl relative overflow-hidden">
                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Current Earnings</p>
                <h2 className="text-2xl font-black italic">Rs {totalEarnings?.toLocaleString()}</h2>
                <TrendingUp className="absolute -right-2 -bottom-2 w-16 h-16 text-white/5" />
-            </div>
+            </div> */}
 
             {/* Mobile Nav Links */}
             <div className="space-y-2">
