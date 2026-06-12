@@ -149,6 +149,36 @@ class TripService:
         
         await self.trip_repo.update_trip_status(trip_id, "in-progress")
         return {"status": "success", "message": "Trip started."}
+    
+    
+    async def update_trip_price(self, trip_id: str, driver_id: str, new_price: float):
+        """
+        Updates the fare for an upcoming trip.
+        Ensures the trip belongs to the driver and has not started yet.
+        """
+        # 1. First, check if the trip exists and belongs to this driver
+        trip = await self.trip_repo.get_by_id(trip_id)
+        if not trip:
+            raise HTTPException(status_code=404, detail="Trip not found.")
+
+        # 2. Authorization check
+        if str(trip.get("driver_id")) != str(driver_id):
+            raise HTTPException(status_code=403, detail="Unauthorized: You do not own this trip.")
+
+        # 3. Status check: Only allow price updates if the trip is still 'scheduled'
+        if trip.get("status") != "scheduled":
+            raise HTTPException(
+                status_code=400, 
+                detail="Cannot update price for a trip that has already started or is completed."
+            )
+
+        # 4. Perform the update via repository
+        success = await self.trip_repo.update_trip_price(trip_id, new_price)
+        
+        if not success:
+            raise HTTPException(status_code=400, detail="Price update failed.")
+            
+        return {"status": "success", "message": "Trip fare updated successfully."}
 
     async def complete_trip(self, trip_id: str, driver_id: str):
         """Finalizes trip and clears active status for all participants."""
