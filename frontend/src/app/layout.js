@@ -3,6 +3,7 @@ import { Toaster } from "react-hot-toast";
 import { DM_Sans } from 'next/font/google'; // 🎯 High-performance font preloading layout configuration
 import MaintenanceGuard from "./guards/MaintenanceGuard";
 import UpdateGuard from "./guards/UpdateGuard";
+import { Analytics } from '@vercel/analytics/next';
 import {  DM_Serif_Display } from 'next/font/google';
 // Configure DM Sans to load natively from the Vercel Edge Server without blocking rendering layout layers
 const dmSans = DM_Sans({
@@ -122,6 +123,7 @@ export default function RootLayout({ children }) {
         <UpdateGuard>
           <MaintenanceGuard>
             {children}
+             <Analytics />
             <Toaster 
               position="bottom-center" 
               toastOptions={{
