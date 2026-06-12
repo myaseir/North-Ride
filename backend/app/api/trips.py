@@ -139,7 +139,7 @@ async def end_trip(trip_id: str, current_user: dict = Depends(get_current_user))
     """Completes trip and moves revenue to driver wallet."""
     return await trip_service.complete_trip(trip_id, str(current_user["_id"]))
 
-@router.patch("/{trip_id}/price", tags=["Driver"])
+@router.post("/{trip_id}/price", tags=["Driver"])
 async def modify_trip_fare(
     trip_id: str,
     payload: PriceUpdateSchema,
