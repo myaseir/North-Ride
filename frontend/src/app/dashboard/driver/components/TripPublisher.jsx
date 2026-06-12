@@ -69,7 +69,7 @@ export default function TripPublisher({ onPublish, loading }) {
         date: formData.date,           
         time: formData.time,           
         departure_time: new Date(`${formData.date}T${formData.time}`).toISOString(),
-        price: Number(formData.price),
+        base_price: Number(formData.price),
         total_seats: 4,
         car_details: "Toyota Corolla - North Ride F1"
       };
