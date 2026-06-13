@@ -207,13 +207,21 @@ class BookingRepository:
                     "destination": {"$ifNull": ["$trip_details.destination", "Unknown"]},
                     "final_driver_name": {
                         "$ifNull": ["$final_driver_name", "$trip_details.listing_driver_name", "Captain"]
+                    },
+                    # 🎯 ADDED FIELDS:
+                    "seat_layout": 1, 
+                    "booked_seat_count": { 
+                        "$cond": {
+                            "if": {"$isArray": "$seat_layout"},
+                            "then": {"$size": "$seat_layout"},
+                            "else": 1
+                        }
                     }
                 }
             },
             {"$sort": {"created_at": -1}}
         ]
         return await self.collection.aggregate(pipeline).to_list(length=50)
-
     async def get_pending_verifications(self):
         pipeline = [
             {"$match": {"status": "pending"}},

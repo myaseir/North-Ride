@@ -306,11 +306,17 @@ async def get_unified_history(
             combined_history.extend(driver_trips)
 
     # 2. Fetch Passenger History (This uses your $lookup enrichment)
+    # 2. Fetch Passenger History
     passenger_bookings = await booking_repo.get_passenger_history(user_id)
-    if passenger_bookings: # 🎯 Add Safety Check to prevent TypeError
+    if passenger_bookings:
         for b in passenger_bookings:
             b["history_type"] = "passenger"
-            # 🔥 CRITICAL: Convert all potential ObjectIds
+            # Normalize to match Driver trip fields
+            b["origin"] = b.get("origin")
+            b["destination"] = b.get("destination")
+            b["price"] = b.get("total_price") # Ensure frontend looks for this
+            b["passenger_count"] = b.get("booked_seat_count", 1) # Use the new field we added
+            
             if "_id" in b:
                 b["id"] = str(b["_id"])
                 b["_id"] = b["id"]
@@ -321,13 +327,18 @@ async def get_unified_history(
     # 3. Sort by date (Newest First)
     combined_history.sort(key=lambda x: x.get("created_at", ""), reverse=True)
 
-    # 4. FINAL SAFETY CHECK: Remove any remaining raw ObjectIds
-    # This prevents the 500 Internal Server Error you are seeing
-    for item in combined_history:
-        for key, value in item.items():
-            if isinstance(value, ObjectId):
-                item[key] = str(value)
+    def clean_object_ids(data):
+        if isinstance(data, list):
+            return [clean_object_ids(item) for item in data]
+        if isinstance(data, dict):
+            return {k: clean_object_ids(v) for k, v in data.items()}
+        if isinstance(data, ObjectId):
+            return str(data)
+        return data
 
+    combined_history = clean_object_ids(combined_history)
+
+    # 5. Finally, return the clean, serialized data
     return combined_history
 
 @router.post("/{trip_id}/manual-seat")

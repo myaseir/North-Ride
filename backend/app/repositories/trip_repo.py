@@ -153,14 +153,38 @@ class TripRepository:
         return self._format_trip(trip)
         
     async def get_history(self, driver_id: str) -> list[dict]:
-        """Fetches past trips for history logs."""
-        query = {
-            "driver_id": self._to_id(driver_id), # 🎯 FIX: Query strictly as ObjectId
-            "status": {"$in": ["completed", "cancelled"]}
-        }
-        cursor = self.collection.find(query).sort("created_at", -1)
-        trips = await cursor.to_list(length=50)
-        return [self._format_trip(t) for t in trips]
+        """Fetches past trips AND their associated bookings for accurate reporting."""
+        pipeline = [
+            # 1. Match the driver's trips
+            {"$match": {
+                "driver_id": self._to_id(driver_id),
+                "status": {"$in": ["completed", "cancelled"]}
+            }},
+            # 2. Join with the bookings collection
+            {
+                "$lookup": {
+                    "from": "bookings",
+                    "localField": "_id",
+                    "foreignField": "trip_id",
+                    "as": "bookings"
+                }
+            },
+            # 3. Sort by creation time
+            {"$sort": {"created_at": -1}},
+            {"$limit": 50}
+        ]
+        
+        trips = await self.collection.aggregate(pipeline).to_list(length=50)
+        
+        # 4. Format the trips (and ensure bookings are included)
+        formatted_trips = []
+        for t in trips:
+            formatted = self._format_trip(t)
+            # Ensure the bookings array is attached for the frontend
+            formatted["bookings"] = t.get("bookings", [])
+            formatted_trips.append(formatted)
+            
+        return formatted_trips
 
     async def find_upcoming_trips(self, origin: str, destination: str, date_str: str, limit: int = 20) -> List[dict]:
         """Finds fallback trips for future dates."""
