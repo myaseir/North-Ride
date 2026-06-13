@@ -216,3 +216,4 @@ async def get_recent_passenger_rides(current_user: dict = Depends(get_current_us
         return rides
     except Exception as e:
         return []
+    
