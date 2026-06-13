@@ -293,14 +293,25 @@ export default function RecentRides({ rides = [] }) {
               // 🎯 THE REVENUE CALCULATION ENGINE CORRECTION
               // Check for explicit pre-computed platform earnings first. 
               // If missing, look for confirmed passengers on board to scale the fare accurately.
-              let totalEarnings = 0;
-              if (ride.earnings !== undefined && ride.earnings !== null) {
-                totalEarnings = Number(ride.earnings);
-              } else {
-                const checkedSeatsCount = Array.isArray(ride.passengers) ? ride.passengers.length : 0;
-                const pricePerSeat = Number(ride.fare || ride.price || 0);
-                totalEarnings = checkedSeatsCount * pricePerSeat;
-              }
+             let totalEarnings = 0;
+
+// 1. If you have an explicit 'earnings' field, trust it
+if (ride.earnings != null) {
+  totalEarnings = Number(ride.earnings);
+} else {
+  // 2. Otherwise, use your logic:
+  // Base price (from your JSON) + 2500 if premium
+  const base = Number(ride.base_price || ride.price || 0);
+  
+  // Since we don't have the passenger count, we have to assume 1 seat
+  // or use a placeholder until you add the passenger count to the backend response
+  const seatsBooked = 1; 
+  
+  // Add 2500 if the seat is premium (assuming a flag exists)
+  const premiumSurcharge = ride.has_premium_seat ? 2500 : 0;
+  
+  totalEarnings = seatsBooked * (base + premiumSurcharge);
+}
 
               return (
                 <div key={ride._id || i} className="rr-row">
