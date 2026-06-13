@@ -293,24 +293,24 @@ export default function RecentRides({ rides = [] }) {
               // 🎯 THE REVENUE CALCULATION ENGINE CORRECTION
               // Check for explicit pre-computed platform earnings first. 
               // If missing, look for confirmed passengers on board to scale the fare accurately.
-             let totalEarnings = 0;
+             // 🎯 UPDATED REVENUE CALCULATION ENGINE
+// 🎯 UPDATED REVENUE CALCULATION ENGINE
+let totalEarnings = 0;
 
-// 1. If you have an explicit 'earnings' field, trust it
 if (ride.earnings != null) {
   totalEarnings = Number(ride.earnings);
 } else {
-  // 2. Otherwise, use your logic:
-  // Base price (from your JSON) + 2500 if premium
-  const base = Number(ride.base_price || ride.price || 0);
+  // Sum up 'total_price' from all confirmed bookings
+  const bookings = ride.bookings || [];
   
-  // Since we don't have the passenger count, we have to assume 1 seat
-  // or use a placeholder until you add the passenger count to the backend response
-  const seatsBooked = 1; 
-  
-  // Add 2500 if the seat is premium (assuming a flag exists)
-  const premiumSurcharge = ride.has_premium_seat ? 2500 : 0;
-  
-  totalEarnings = seatsBooked * (base + premiumSurcharge);
+  totalEarnings = bookings.reduce((sum, b) => {
+    // Only count confirmed/completed bookings
+    const isConfirmed = b.status?.toLowerCase() === 'completed' || b.status?.toLowerCase() === 'confirmed';
+    if (!isConfirmed) return sum;
+    
+    // Use the pre-calculated total from the backend
+    return sum + Number(b.total_price || 0);
+  }, 0);
 }
 
               return (

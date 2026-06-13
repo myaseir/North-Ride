@@ -450,11 +450,23 @@ export default function DriverTripCard({ trip, onStart, onEnd }) {
   const [notification, setNotification]       = useState(null);
   const pendingAction = useRef(null);
 
-  const passengerCount = trip.passengers?.length || 0;
-  const totalSeats     = trip.total_seats || 4;
-  const isFull         = passengerCount >= totalSeats;
-  const emptySeats     = totalSeats - passengerCount;
-  const live           = status === 'in-progress';
+ // 🎯 REPLACE YOUR OLD SEAT CALCULATIONS WITH THIS:
+ // 🎯 ACCURATE CALCULATION: Only count confirmed/verified seats
+const occupiedSeats = (trip.passengers || []).reduce((total, p) => {
+  // Check if this specific passenger booking is confirmed
+  const isConfirmed = p.status === 'confirmed' || p.status === 'completed';
+  
+  if (!isConfirmed) return total; // Ignore pending/cancelled bookings
+
+  // Add the number of seats for this confirmed booking
+  const seatsTaken = Array.isArray(p.seat_layout) ? p.seat_layout.length : 1;
+  return total + seatsTaken;
+}, 0);
+
+const totalSeats = trip.total_seats || 4;
+const emptySeats = Math.max(0, totalSeats - occupiedSeats);
+const isFull = occupiedSeats >= totalSeats;
+  const live = status === 'in-progress';
 
   useEffect(() => { if (trip.price) setLivePrice(trip.price); }, [trip.price]);
 
@@ -493,19 +505,19 @@ export default function DriverTripCard({ trip, onStart, onEnd }) {
     finally { setIsActionLoading(false); }
   };
 
-  const handleStartTrip = () => {
-    if (!isFull) {
+ const handleStartTrip = () => {
+    if (occupiedSeats < totalSeats) {
       showNotif({
         type: 'warn',
-        title: `${emptySeats} seat${emptySeats > 1 ? 's' : ''} still empty`,
-        body: `You have <strong>${passengerCount} of ${totalSeats} passengers</strong>.<br/>After you start, no one new can book this trip.`,
+        title: `${emptySeats} seat${emptySeats !== 1 ? 's' : ''} still empty`,
+        body: `You have <strong>${occupiedSeats} of ${totalSeats} seats booked</strong>.<br/>After you start, no one new can book this trip.`,
         confirmLabel: 'Yes, Start Now',
       }, executeStart);
     } else {
       showNotif({
         type: 'ok',
         title: 'All seats filled!',
-        body: `<strong>${totalSeats} passengers</strong> ready to go.<br/>${trip.origin} → ${trip.destination}`,
+        body: `<strong>${occupiedSeats} seats booked</strong>. Ready to go.<br/>${trip.origin} → ${trip.destination}`,
         confirmLabel: 'Start Trip',
       }, executeStart);
     }
@@ -569,11 +581,11 @@ export default function DriverTripCard({ trip, onStart, onEnd }) {
         </div>
 
         {/* ── Seat bar ── */}
-        <div className="dtc-seats-row">
+      <div className="dtc-seats-row">
           {Array.from({ length: totalSeats }).map((_, i) => (
-            <div key={i} className={`dtc-seat ${i < passengerCount ? 'dtc-seat--filled' : 'dtc-seat--empty'}`} />
+            <div key={i} className={`dtc-seat ${i < occupiedSeats ? 'dtc-seat--filled' : 'dtc-seat--empty'}`} />
           ))}
-          <span className="dtc-seats-label">{passengerCount}/{totalSeats}</span>
+          <span className="dtc-seats-label">{occupiedSeats}/{totalSeats}</span>
         </div>
 
         {/* ── Fare ── */}
@@ -615,11 +627,11 @@ export default function DriverTripCard({ trip, onStart, onEnd }) {
         </div>
 
         {/* ── Action bar ── */}
-        <div className="dtc-action-bar">
+       <div className="dtc-action-bar">
           <div className="dtc-pax-info">
             <div className="dtc-pax-icon"><Users size={14} /></div>
             <div>
-              <div className="dtc-pax-count">{passengerCount} passenger</div>
+              <div className="dtc-pax-count">{occupiedSeats} seats booked</div>
               <div className="dtc-pax-sub">{live ? 'In transit' : 'Booked'}</div>
             </div>
           </div>
