@@ -1,8 +1,7 @@
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { DM_Sans } from 'next/font/google'; // 🎯 High-performance font preloading layout configuration
-import MaintenanceGuard from "./guards/MaintenanceGuard";
-import UpdateGuard from "./guards/UpdateGuard";
+
 import { Analytics } from '@vercel/analytics/next';
 import {  DM_Serif_Display } from 'next/font/google';
 // Configure DM Sans to load natively from the Vercel Edge Server without blocking rendering layout layers
@@ -120,8 +119,7 @@ export default function RootLayout({ children }) {
       </head>
       {/* Inject dmSans.variable so Tailwind v4 global.css can read the --font-dm-sans configuration */}
       <body className={`${dmSans.variable} ${dmSerif.variable} font-sans antialiased bg-white text-slate-900 selection:bg-emerald-100 selection:text-emerald-900`}>
-        <UpdateGuard>
-          <MaintenanceGuard>
+       
             {children}
              <Analytics />
             <Toaster 
@@ -137,8 +135,7 @@ export default function RootLayout({ children }) {
                 },
               }}
             />
-          </MaintenanceGuard>
-        </UpdateGuard>
+         
       </body>
     </html>
   );
