@@ -15,6 +15,7 @@ export default function BookingModal({
   isOpen, 
   onClose, 
   trip, 
+  user,
   availableDiscounts, 
   onConfirm 
 }) {
@@ -61,7 +62,7 @@ export default function BookingModal({
       ...prev, 
       seats: seatData.seats,
       seat_layout: seatData.seat_layout || seatData.seatLayout, // Ensure fallback 
-      useDiscount: seatData.useDiscount,
+      useDiscount: seatData.use_discount,
       finalPrice: seatData.finalPrice // 🎯 THE FIX: Catch the price that includes the 2500 surcharge!
     }));
     setStep(2);
@@ -80,11 +81,15 @@ const handleFinalSubmit = async (paymentData) => {
         const payload = {
             trip_id: trip.id || trip._id,
             seat_layout: bookingData.seat_layout, 
-            transactionId: String(paymentData.transactionId),
+            
+            // 🎯 MUST MATCH PYDANTIC EXPECTATIONS (camelCase)
+            transactionId: String(paymentData.transactionId), 
             senderName: String(paymentData.senderName),
+            
+            // 🎯 Keep these as snake_case if your Pydantic model defines them as such
             account_number: String(paymentData.account_number), 
             amount_paid: parseFloat(paymentData.amount_paid || paymentData.amount), 
-            apply_discount: Boolean(bookingData.useDiscount)
+            use_discount: Boolean(bookingData.useDiscount)
         };
 
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/trips/book`, {
@@ -169,6 +174,7 @@ const handleFinalSubmit = async (paymentData) => {
             <SeatSelectionStep 
               trip={trip} 
               availableDiscounts={availableDiscounts} 
+              user={user}
               initialData={bookingData}
               onNext={handleNextToPayment} 
             />

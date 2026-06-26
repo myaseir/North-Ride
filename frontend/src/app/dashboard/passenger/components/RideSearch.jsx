@@ -17,7 +17,12 @@ export default function RideSearch({ onSearch, loading, onClear }) {
   const [to, setTo] = useState('');
   
   // Default to today's date in YYYY-MM-DD format
-  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+ const [date, setDate] = useState(() => {
+  const now = new Date();
+  const offset = now.getTimezoneOffset();
+  const localDate = new Date(now.getTime() - (offset * 60 * 1000));
+  return localDate.toISOString().split('T')[0];
+});
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSearch = useCallback(
@@ -39,7 +44,10 @@ export default function RideSearch({ onSearch, loading, onClear }) {
   const handleClear = () => {
     setFrom('');
     setTo('');
-    setDate(new Date().toISOString().split('T')[0]);
+    const now = new Date();
+    const offset = now.getTimezoneOffset();
+    const localDate = new Date(now.getTime() - (offset * 60 * 1000));
+    setDate(localDate.toISOString().split('T')[0]);
     if (onClear) onClear();
   };
 
@@ -87,7 +95,12 @@ export default function RideSearch({ onSearch, loading, onClear }) {
         <input 
           type="date"
           value={date}
-          min={new Date().toISOString().split('T')[0]} // Prevents selecting past dates
+         min={(() => {
+  const now = new Date();
+  const offset = now.getTimezoneOffset();
+  const localDate = new Date(now.getTime() - (offset * 60 * 1000));
+  return localDate.toISOString().split('T')[0];
+})()}// Prevents selecting past dates
           onChange={(e) => {
             const newDate = e.target.value;
             setDate(newDate);

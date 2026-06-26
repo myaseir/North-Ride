@@ -1,93 +1,146 @@
 "use client";
 
-import { Copy, Gift, CheckCircle2, Share2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Copy, Gift, MessageCircle, CheckCircle2, Clock, User, Award, Crown, Sparkles, Share2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function ReferralWidget({ stats }) {
-  const progress = stats.count % 5;
-  const percentage = (progress / 5) * 100;
-  const remaining = 5 - progress;
+  console.log("DEBUG: Stats object received by widget:", stats);
+  const [referrals, setReferrals] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // 🎯 Safely extract data from loyalty_meta
+  const loyaltyMeta = stats?.loyalty_meta || {};
+  const dbReferralCount = loyaltyMeta.referral_count || 0;
+  const currentTier = loyaltyMeta.tier || 'Bronze';
+  
+const progress = dbReferralCount % 4; 
+  const rewardsUnlocked = Math.floor(dbReferralCount / 4);
+  const totalDiscount = rewardsUnlocked * 10;
+
+  // 🎯 Dynamic Tier Styling
+  const getTierBadge = (tier) => {
+    switch (tier) {
+      case 'Gold': return { bg: 'bg-amber-100', text: 'text-amber-800', icon: <Crown size={12} /> };
+      case 'Silver': return { bg: 'bg-slate-100', text: 'text-slate-700', icon: <Sparkles size={12} /> };
+      default: return { bg: 'bg-orange-50', text: 'text-orange-700', icon: <Award size={12} /> };
+    }
+  };
+  const tierStyle = getTierBadge(currentTier);
+
+  useEffect(() => {
+    const fetchReferrals = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/referrals/my-status`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setReferrals(data);
+        }
+      } catch (err) {
+        console.error("Failed to load referral status");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    // 🎯 Fix: Only fetch if the stats are available
+    if (stats?.code) {
+      fetchReferrals();
+    }
+  }, [stats?.code]);
+
+  if (!stats?.code) return null;
 
   const copyCode = () => {
     navigator.clipboard.writeText(stats.code);
-    toast.success("Referral code copied!");
+    toast.success("Code copied to clipboard!");
   };
 
   return (
-    <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden">
+    <div className="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-xl shadow-slate-100/50 w-full max-w-sm mx-auto">
       
-      {/* Subtle Top Accent */}
-      <div className="absolute top-0 left-0 w-full h-1.5 bg-emerald-500/20" />
-
-      <div className="relative z-10">
-        
-        {/* Header Section */}
-        <div className="flex items-start justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-emerald-50 rounded-2xl">
-              <Gift size={20} className="text-emerald-600" />
-            </div>
-            <div>
-              <span className="block text-[11px] font-bold uppercase tracking-widest text-emerald-600 mb-0.5">
-                Rewards
-              </span>
-              <h3 className="text-lg md:text-xl font-bold text-slate-900 tracking-tight">
-                Invite & Earn 10% Off
-              </h3>
-            </div>
+      {/* --- HEADER --- */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-xl font-black text-slate-900 tracking-tighter">Referrals</h3>
+          <div className={`mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${tierStyle.bg} ${tierStyle.text}`}>
+            {tierStyle.icon} {currentTier} Member
           </div>
-          
-          {/* Discount Badge (Only shows if available) */}
-          {stats.availableDiscounts > 0 && (
-            <div className="flex flex-col items-end bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Available</span>
-              <span className="text-lg font-bold text-emerald-600 leading-none">x{stats.availableDiscounts}</span>
-            </div>
-          )}
         </div>
+        <div className="p-3 bg-emerald-50 rounded-2xl">
+          <Gift size={20} className="text-emerald-600" />
+        </div>
+      </div>
 
-        {/* Progress Tracker */}
-        <div className="mb-8 bg-slate-50 p-5 md:p-6 rounded-2xl border border-slate-100">
-          <div className="flex justify-between items-end mb-4">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest">
-              Next Reward Progress
-            </span>
-            <span className="text-sm font-bold text-slate-900">
-              {progress} <span className="text-slate-400 font-medium">/ 5</span>
-            </span>
-          </div>
+      {/* --- REWARD VAULT --- */}
+      <div className="bg-slate-900 rounded-3xl p-6 mb-6 text-white relative overflow-hidden">
+        <div className="relative z-10">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Total Discount</p>
+          <p className="text-4xl font-black mb-4">{totalDiscount}%</p>
           
-          <div className="h-2.5 w-full bg-slate-200 rounded-full overflow-hidden mb-3">
-            <div 
-              className="h-full bg-emerald-500 rounded-full transition-all duration-1000 ease-out" 
-              style={{ width: `${percentage}%` }}
-            />
+          <div className="flex gap-2 h-2 mb-2">
+            {[1, 2, 3, 4].map((step) => (
+              <div key={step} className={`flex-1 rounded-full transition-all duration-500 ${step <= progress ? 'bg-emerald-400' : 'bg-slate-700'}`} />
+            ))}
           </div>
-          
-          <p className="text-[13px] font-medium text-slate-500">
-            Invite <span className="font-bold text-slate-900">{remaining}</span> more {remaining === 1 ? 'friend' : 'friends'} to unlock your discount!
+          <p className="text-[10px] text-slate-400 font-medium">
+            {progress}/4 referrals toward next 10%
           </p>
         </div>
+        <div className="absolute top-0 right-0 p-4 opacity-10">
+          <Award size={80} />
+        </div>
+      </div>
 
-        {/* Code Copier */}
-        <div>
-          <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2 ml-1">
-            Your Personal Code
-          </label>
-          <div className="flex items-center gap-3">
-            <div className="flex-1 bg-white border border-slate-200 px-5 py-4 rounded-2xl font-mono text-[15px] font-bold tracking-widest text-slate-900 flex items-center justify-between shadow-sm">
-              {stats.code}
-            </div>
-            <button 
-              onClick={copyCode}
-              className="px-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white transition-all rounded-2xl shadow-md shadow-emerald-900/10 active:scale-[0.98] flex items-center justify-center gap-2 font-semibold text-[13px] tracking-wide"
-            >
-              <Copy size={18} /> 
-              <span className="hidden sm:inline">Copy</span>
-            </button>
-          </div>
+      {/* --- ACTION SECTION --- */}
+      <div className="flex gap-3 mb-8">
+       <button onClick={copyCode} className="flex items-center justify-center gap-2 flex-1 bg-slate-100 py-3 rounded-2xl font-bold text-slate-900 text-sm hover:bg-slate-200 transition-colors">
+  <Copy size={14} /> {stats.code}
+</button>
+        <button onClick={() => window.open(`https://wa.me/?text=Use my code ${stats.code} on North Ride!`, '_blank')} 
+                className="bg-emerald-600 text-white px-6 rounded-2xl hover:bg-emerald-700 transition-colors">
+          <Share2 size={20} />
+        </button>
+      </div>
+
+      {/* --- HISTORY LIST --- */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recent Activity</h4>
+            <span className="text-[10px] font-bold text-slate-900">{dbReferralCount} Invites</span>
         </div>
 
+        {loading ? (
+          <div className="space-y-3">
+             {[1,2].map(i => <div key={i} className="h-14 bg-slate-50 rounded-2xl animate-pulse" />)}
+          </div>
+        ) : referrals.length === 0 ? (
+          <div className="text-center py-8 bg-slate-50 rounded-2xl">
+            <p className="text-xs text-slate-400">No one has used your code yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+            {referrals.map((ref, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center border border-slate-100">
+                    <User size={14} className="text-slate-400" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-900">{ref.username}</span>
+                </div>
+                
+                <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-full ${
+                  ref.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {ref.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

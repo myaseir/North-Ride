@@ -12,7 +12,7 @@
     "@capacitor/android": "^8.0.2",
     "@capacitor/cli": "^8.0.2",
     "@capacitor/core": "^8.0.2",
-    "@fingerprintjs/fingerprintjs": "^5.0.1",
+    "@fingerprintjs/fingerprintjs": "^5.2.0",
     "@next/bundle-analyzer": "^16.2.9",
     "@tailwindcss/postcss": "^4.1.18",
     "@vercel/analytics": "^2.0.1",

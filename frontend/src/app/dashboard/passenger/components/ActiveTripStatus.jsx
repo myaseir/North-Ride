@@ -124,7 +124,10 @@ export default function ActiveTripStatus({ trip, currentUserEmail, currentUserId
     );
 
     // 5. Get the best driver details from a confirmed booking (or fallback to trip defaults)
-    const confirmedBooking = allUserBookings.find(p => p.status === 'confirmed' && p.final_driver_name) || baseBooking;
+    // 5. 🎯 THE FIX: Reverse the array to grab the NEWEST confirmed booking's driver details!
+    const confirmedBooking = [...allUserBookings]
+      .reverse()
+      .find(p => p.status === 'confirmed' && p.final_driver_name) || baseBooking;
 
     return { 
       totalSeats: aggregatedSeats.length,
@@ -148,12 +151,20 @@ export default function ActiveTripStatus({ trip, currentUserEmail, currentUserId
   };
 
   // Formatting Time
+// Formatting Time (Universal/Wall Clock safe)
   const formatTime = (timeStr) => {
     if (!timeStr) return "TBD";
-    const date = new Date(timeStr);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    
+    // 🎯 If the string is ISO format (e.g., "2026-06-26T07:18"), extract the time part
+    const timePart = timeStr.includes('T') ? timeStr.split('T')[1] : timeStr;
+    const [hours, minutes] = timePart.split(':');
+    
+    let h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12; // Convert to 12-hour format
+    
+    return `${h.toString().padStart(2, '0')}:${minutes} ${ampm}`;
   };
-
   const handlePaymentSubmit = async (paymentProof) => {
     const token = localStorage.getItem("token");
     if (!token) {

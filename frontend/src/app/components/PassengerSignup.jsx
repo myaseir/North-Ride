@@ -1,18 +1,29 @@
 "use client";
 
-import { useState } from 'react';
-import { Mail, Lock, User, ArrowRight, Loader2, ChevronLeft, ShieldCheck } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
 import { toast } from 'react-hot-toast';
 import OTPVerification from './OTPVerification';
-
+import { getDeviceIdentifier } from '../utils/fingerprint';
+import { Mail, Lock, User, ArrowRight, Loader2, ChevronLeft, ShieldCheck, Gift } from 'lucide-react';
 export default function PassengerSignup({ onBack, onComplete }) {
+  const [fp, setFp] = useState(null);
   const [step, setStep] = useState(1); // 1: Form, 2: OTP
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     email: '',
-    password: ''
+    password: '',
+    referralCode: ''
   });
+
+
+
+
+useEffect(() => {
+    // Generate fingerprint once on load
+    getDeviceIdentifier().then(setFp);
+  }, []);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || 'http://127.0.0.1:8000';
 
@@ -47,12 +58,19 @@ export default function PassengerSignup({ onBack, onComplete }) {
   const handleFinalRegister = async () => {
     setLoading(true);
     const toastId = toast.loading("Creating your account...");
-
     try {
-      const res = await fetch(`${apiUrl}/api/auth/register`, {
+      // 🎯 Combine form data with security & referral info
+      const registrationPayload = {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        fingerprint: fp,         
+        referral_code: formData.referralCode.trim() !== '' ? formData.referralCode : null 
+      };
+    const res = await fetch(`${apiUrl}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(registrationPayload)
       });
 
       const data = await res.json();
@@ -152,6 +170,20 @@ export default function PassengerSignup({ onBack, onComplete }) {
                 className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 text-[15px] font-medium text-slate-900 transition-all placeholder:text-slate-300"
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
+              />
+            </div>
+          </div>
+{/* Optional Referral Code Input */}
+          <div className="space-y-2 group">
+            <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest ml-1">Referral Code (Optional)</label>
+            <div className="relative">
+              <Gift className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={18} />
+              <input 
+                type="text" 
+                placeholder="Enter code if you have one"
+                className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 text-[15px] font-medium text-slate-900 transition-all placeholder:text-slate-300 uppercase"
+                value={formData.referralCode}
+                onChange={(e) => setFormData({...formData, referralCode: e.target.value})}
               />
             </div>
           </div>

@@ -32,21 +32,37 @@ export default function PaymentFormStep({ finalPrice, initialData, onBack, onSub
         style: { borderRadius: '10px', background: '#064e3b', color: '#fff', fontSize: '12px' }
     });
   };
+const [isSubmitting, setIsSubmitting] = useState(false);
 
- const handleSubmission = () => {
-    onSubmit({
-        senderName: formData.senderName,
-        transactionId: formData.transactionId,
-        account_number: formData.accountNo,
-        
-        // 🎯 THE CRITICAL FIX: 
-        // We show the user the 20% (advancePayable) in the UI, 
-        // but we send the 100% (finalPrice) to the backend 
-        // so the TripService can calculate the Driver's full revenue correctly.
-        amount_paid: parseFloat(finalPrice), 
-        
-        submittedAt: new Date().toISOString()
-    });
+
+const [priceCorrection, setPriceCorrection] = useState(null);
+
+  const handleSubmission = async () => {
+    setIsSubmitting(true);
+    setPriceCorrection(null); 
+
+    try {
+        await onSubmit({
+            senderName: formData.senderName,      // Matches Pydantic: senderName
+            transactionId: formData.transactionId, // Matches Pydantic: transactionId
+            account_number: formData.accountNo,    // Matches Pydantic: account_number
+            amount_paid: parseFloat(finalPrice), 
+            submittedAt: new Date().toISOString(),
+            // 🎯 FIX: Changed 'apply_discount' to 'use_discount' to match Pydantic
+            use_discount: initialData.useDiscount 
+        });
+    } catch (err) {
+        // 🎯 FIX: 'fetch' throws a standard Error object, not an Axios response.
+        // We check the error message for the specific string "PRICE_CHANGED"
+        if (err.message.includes("PRICE_CHANGED")) {
+            // Note: If you need the new price, ensure the error message 
+            // passed from BookingModal contains it, or parse it here.
+            toast.error("Price has updated. Please review the new total.");
+        } else {
+            toast.error(err.message || "Booking failed. Please try again.");
+        }
+        setIsSubmitting(false);
+    }
 };
 
   return (
@@ -110,7 +126,13 @@ export default function PaymentFormStep({ finalPrice, initialData, onBack, onSub
           </div>
         </div>
       </div>
-
+{/* 🎯 PRICE CORRECTION BANNER */}
+{priceCorrection && (
+  <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl text-xs font-bold mb-4 animate-in fade-in slide-in-from-top-2">
+    ⚠️ Fare updated: The trip price has been adjusted to <span className="underline">PKR {priceCorrection.toLocaleString()}</span>. 
+    Please review the new total.
+  </div>
+)}
       {/* SECTION 2: SETTLEMENT AMOUNT DISPLAY */}
       <div className="bg-emerald-50/80 border border-emerald-100 p-4 rounded-2xl flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -200,10 +222,10 @@ export default function PaymentFormStep({ finalPrice, initialData, onBack, onSub
         <button 
           type="button"
           onClick={handleSubmission}
-          disabled={!isFormValid}
+          disabled={!isFormValid || isSubmitting}
           className="flex-1 h-14 bg-slate-900 text-white rounded-2xl text-xs font-bold uppercase tracking-wider shadow-md hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed active:scale-[0.98]"
         >
-          Pay PKR {advancePayable.toLocaleString()} <CheckCircle2 size={16} className="text-emerald-400" />
+          {isSubmitting ? "Processing..." : `Pay PKR ${advancePayable.toLocaleString()}`} <CheckCircle2 size={16} className="text-emerald-400" />
         </button>
       </div>
     </div>

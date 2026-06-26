@@ -3,8 +3,14 @@ import React, { useState, useMemo } from 'react';
 import { Tag, ArrowRight, ShieldCheck, Info, Star  } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-export default function SeatSelectionStep({ trip, availableDiscounts, initialData, onNext }) {
-  const basePricePerSeat = trip.fare || trip.price || 0;
+export default function SeatSelectionStep({ trip,user, initialData, onNext }) {
+  // 🎯 DEBUGGER: See exactly what the frontend is receiving
+const referralCount = user?.loyalty_meta?.referral_count || 0;
+  
+
+  // 🎯 CORRECTED Line 6
+const basePricePerSeat = trip.base_price || trip.fare || trip.price || 0;
+console.log("DEBUG - Frontend Base Price:", basePricePerSeat);
   const availableSeatsCount = trip.available_seats ?? 4; 
 
   // --- STATE ---
@@ -41,7 +47,7 @@ const seatConfig = [
       }
     };
     fetchManifest();
-    const interval = setInterval(fetchManifest, 5000); // Polling for updates
+    const interval = setInterval(fetchManifest, 15000); // Polling for updates
     return () => clearInterval(interval);
   }, [trip]);
 
@@ -75,11 +81,12 @@ const seatStatuses = useMemo(() => {
 
   // --- PRICING MATH ---
 // --- PRICING MATH ---
-  const FRONT_SEAT_SURCHARGE = 2500; // 🎯 Define the flat fee
+  // --- PRICING MATH ---
+// --- PRICING MATH ---
+  const FRONT_SEAT_SURCHARGE = 2500;
   
   const currentTotalBasePrice = useMemo(() => {
     return selectedSeats.reduce((total, seatId) => {
-      // If Front Left is selected, add base + 2500, else just base
       const seatPrice = (seatId === 'FL') 
         ? (basePricePerSeat + FRONT_SEAT_SURCHARGE) 
         : basePricePerSeat;
@@ -87,7 +94,18 @@ const seatStatuses = useMemo(() => {
     }, 0);
   }, [selectedSeats, basePricePerSeat]);
 
-  const finalPrice = useDiscount ? Math.floor(currentTotalBasePrice * 0.9) : currentTotalBasePrice;
+  // 🎯 SYNCED MATH: Match backend logic: (referral_count // 4) * 0.10
+  // const referralCount = initialData.loyalty_meta?.referral_count || 0;
+  const tiersEarned = Math.floor(referralCount / 4);
+  const referralDiscountPercent = Math.min(tiersEarned * 0.10, 0.50); // Cap at 50%
+  
+  const discountMultiplier = 1 - referralDiscountPercent;
+
+  const finalPrice = useDiscount 
+    ? Math.floor(currentTotalBasePrice * discountMultiplier) 
+    : currentTotalBasePrice;
+
+  const discountPercent = referralDiscountPercent * 100;
   const advancePayment = Math.ceil(finalPrice * 0.20);
   // --- HANDLERS ---
   const toggleSeat = (seatId) => {
@@ -126,7 +144,7 @@ const seatStatuses = useMemo(() => {
     advancePayment: advancePayment, 
     // 🎯 CHANGE THIS LINE: Pass the 100% price instead of the 20%
     finalPrice: finalPrice,     
-    useDiscount 
+    use_discount: useDiscount,
   });
 };
 
@@ -237,25 +255,55 @@ const seatStatuses = useMemo(() => {
       </div>
 
       {/* --- REWARD & FARE --- */}
-      {availableDiscounts > 0 && selectedSeats.length > 0 && (
-        <label className="flex items-center justify-between p-3.5 border border-emerald-100 bg-emerald-50/70 rounded-2xl cursor-pointer group hover:bg-emerald-50 transition-colors">
-          <div className="flex items-center gap-3 text-emerald-700">
-            <div className="p-2 bg-emerald-100/80 rounded-xl group-hover:bg-emerald-200 transition-colors">
-              <Tag size={16} />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">Apply 10% Reward</span>
-              <span className="text-[10px] font-semibold text-emerald-600">{availableDiscounts} available</span>
-            </div>
+{/* --- DYNAMIC DISCOUNT/REFERRAL SECTION --- */}
+{selectedSeats.length > 0 && (
+  <div className="mt-4 transition-all duration-500 ease-in-out">
+    {/* 🎯 UPDATE THIS CONDITION TO USE tiersEarned */}
+    {tiersEarned > 0 ? (
+      /* STATE A: Discount Available - Show Toggle */
+      <label className="flex items-center justify-between p-3.5 border border-emerald-100 bg-emerald-50/70 rounded-2xl cursor-pointer group hover:bg-emerald-50 transition-colors">
+        <div className="flex items-center gap-3 text-emerald-700">
+          <div className="p-2 bg-emerald-100/80 rounded-xl group-hover:bg-emerald-200 transition-colors">
+            <Tag size={16} />
           </div>
-          <input 
-            type="checkbox" 
-            checked={useDiscount} 
-            onChange={(e) => setUseDiscount(e.target.checked)}
-            className="w-5 h-5 accent-emerald-500 cursor-pointer rounded"
-          />
-        </label>
-      )}
+          <div className="flex flex-col">
+            <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+              Apply {Math.floor(referralCount / 4) * 10}% Reward
+            </span>
+            <span className="text-[10px] font-semibold text-emerald-600">
+              {tiersEarned} tier(s) available
+            </span>
+          </div>
+        </div>
+        <input 
+          type="checkbox" 
+          checked={useDiscount} 
+          onChange={(e) => setUseDiscount(e.target.checked)}
+          className="w-5 h-5 accent-emerald-500 cursor-pointer rounded"
+        />
+      </label>
+    ) : (
+      /* STATE B: No Discount - Educate the user */
+      <div className="p-3.5 border border-slate-100 bg-slate-50 rounded-2xl flex items-center justify-between animate-in fade-in duration-700">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-white rounded-xl shadow-sm border border-slate-100 text-amber-500">
+            <Star size={16} className="fill-amber-400" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">Unlock Rewards</span>
+            <span className="text-[10px] font-medium text-slate-500">Get 10% off every 4 referrals!</span>
+          </div>
+        </div>
+        <button 
+          onClick={() => toast("Redirecting to profile...", {icon: '🎁'})}
+          className="text-[10px] font-black uppercase text-emerald-600 bg-white px-3 py-1.5 rounded-lg border border-emerald-100 shadow-sm hover:bg-emerald-50 transition-all"
+        >
+          Invite Now
+        </button>
+      </div>
+    )}
+  </div>
+)}
 
       {/* --- PRICING SUMMARY --- */}
       {/* --- PRICING SUMMARY --- */}

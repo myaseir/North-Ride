@@ -39,7 +39,8 @@ export default function OTPVerification({ email, onVerified, onBack }) {
 
   const handleVerify = async (e) => {
     e.preventDefault();
-    const otpCode = otp.join('');
+    // Trim each digit to ensure no accidental spaces are included
+    const otpCode = otp.map(digit => digit.trim()).join('');
     
     if (otpCode.length < 6) {
       toast.error("Please enter the full 6-digit code");
@@ -51,8 +52,9 @@ export default function OTPVerification({ email, onVerified, onBack }) {
       const response = await fetch(`${apiUrl}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        // Ensure email is lowercase to match the backend .lower() logic
         body: JSON.stringify({
-          email: email,
+          email: email.toLowerCase(), 
           otp_code: otpCode
         }),
       });
@@ -95,17 +97,19 @@ export default function OTPVerification({ email, onVerified, onBack }) {
           {/* 🎯 FIXED: Changed to justify-center with smaller dynamic gaps */}
           <div className="flex justify-center gap-1.5 sm:gap-3 max-w-sm mx-auto">
             {otp.map((data, index) => (
-              <input
-                key={index}
-                type="text"
-                maxLength="1"
-                value={data}
-                onChange={e => handleChange(e.target, index)}
-                onKeyDown={e => handleKeyDown(e, index)}
-                onFocus={e => e.target.select()}
-                /* 🎯 FIXED: Made boxes 40px wide on mobile (w-10) and 48px on tablet/desktop (sm:w-12) */
-                className="w-10 h-12 sm:w-12 sm:h-14 border border-slate-200 bg-slate-50 rounded-xl text-center text-lg sm:text-xl font-bold text-slate-900 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 focus:bg-white transition-all shadow-sm"
-              />
+              // Update the input tag inside your map function
+<input
+  key={index}
+  type="tel" // 🎯 Changed from "text" to "tel" to trigger numeric keypad on mobile
+  inputMode="numeric" // 🎯 Ensures numeric keypad
+  pattern="[0-9]*"   // 🎯 Ensures numeric keypad
+  maxLength="1"
+  value={data}
+  onChange={e => handleChange(e.target, index)}
+  onKeyDown={e => handleKeyDown(e, index)}
+  onFocus={e => e.target.select()}
+  className="w-10 h-12 sm:w-12 sm:h-14 border border-slate-200 bg-slate-50 rounded-xl text-center text-lg sm:text-xl font-bold text-slate-900 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 focus:bg-white transition-all shadow-sm"
+/>
             ))}
           </div>
 

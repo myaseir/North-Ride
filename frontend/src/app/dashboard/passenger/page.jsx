@@ -34,7 +34,7 @@ const [ratingData, setRatingData] = useState(null);
   // Data States
   const [searchResults, setSearchResults] = useState([]);
   const [recentRides, setRecentRides] = useState([]);
-  const [referralStats, setReferralStats] = useState({ count: 0, availableDiscounts: 0, code: '' });
+  const [referralStats, setReferralStats] = useState(null);
   const [activeTripDetails, setActiveTripDetails] = useState(null);
 
   // UI States
@@ -65,14 +65,7 @@ const fetchDashboardData = useCallback(async (token) => {
         setRecentRides(Array.isArray(rides) ? rides : []);
       }
       
-      if (referralRes.ok) {
-        const refs = await referralRes.json();
-        setReferralStats({
-          count: refs.total_referrals || 0,
-          availableDiscounts: refs.available_discounts || 0,
-          code: refs.referral_code || '...'
-        });
-      }
+      
 
       if (activeRes.ok) {
         const activeData = await activeRes.json();
@@ -251,7 +244,7 @@ const handleRatingSubmit = useCallback(async (payload) => {
   trip={activeTripDetails} 
   currentUserEmail={user?.email} 
   currentUserId={user?.id || user?._id} 
-  availableDiscounts={referralStats.availableDiscounts}
+  availableDiscounts={user?.loyalty_meta?.active_discount || 0}
   onRefresh={() => fetchDashboardData(user?.token)} 
   onAddSeats={(bookingData) => handleBookRide(activeTripDetails.id || activeTripDetails._id, bookingData)}
 />
@@ -262,7 +255,12 @@ const handleRatingSubmit = useCallback(async (payload) => {
                <PassengerRecentRides rides={recentRides} />
             </div>
 
-            <ReferralWidget stats={referralStats} />
+        <ReferralWidget 
+  stats={{ 
+    ...user, 
+    code: user.personal_referral_code 
+  }} 
+/>
           </main>
         ) : (
           /* If NOT booked: Navbar -> Find Ride -> Search Result -> Recent Ride -> Referral */
@@ -287,7 +285,12 @@ const handleRatingSubmit = useCallback(async (payload) => {
                   <div className="py-10 flex justify-center"><Loader2 className="animate-spin text-emerald-500" /></div>
                 ) : searchResults.length > 0 ? (
                   searchResults.map(t => (
-                    <PassengerTripCard key={t.id || t._id} trip={t} availableDiscounts={referralStats.availableDiscounts} onBook={handleBookRide} />
+                    <PassengerTripCard 
+  key={t.id || t._id} 
+  trip={t} 
+  user={user} 
+  onBook={handleBookRide} 
+/>
                   ))
                 ) : (
                   <div className="p-10 text-center bg-white rounded-[30px] border border-slate-100"><p className="text-[10px] font-bold text-slate-400">NO UNITS FOUND</p></div>
@@ -300,7 +303,12 @@ const handleRatingSubmit = useCallback(async (payload) => {
                <PassengerRecentRides rides={recentRides} />
             </div>
 
-            <ReferralWidget stats={referralStats} />
+           <ReferralWidget 
+  stats={{ 
+    ...user, 
+    code: user.personal_referral_code 
+  }} 
+/>
           </main>
         )}
       </div>
@@ -314,7 +322,7 @@ const handleRatingSubmit = useCallback(async (payload) => {
   trip={activeTripDetails} 
   currentUserEmail={user?.email} 
   currentUserId={user?.id || user?._id} 
-  availableDiscounts={referralStats.availableDiscounts}
+  availableDiscounts={user?.loyalty_meta?.active_discount || 0}
   onRefresh={() => fetchDashboardData(user?.token)} 
   onAddSeats={(bookingData) => handleBookRide(activeTripDetails.id || activeTripDetails._id, bookingData)}
 />
@@ -333,7 +341,12 @@ const handleRatingSubmit = useCallback(async (payload) => {
               </div>
             )}
           </section>
-          <ReferralWidget stats={referralStats} />
+       <ReferralWidget 
+  stats={{ 
+    ...user, 
+    code: user.personal_referral_code 
+  }} 
+/>
         </div>
 
         <div className="lg:col-span-8 space-y-6">
@@ -352,7 +365,12 @@ const handleRatingSubmit = useCallback(async (payload) => {
                 <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-emerald-500" size={32} /></div>
               ) : searchResults.length > 0 ? (
                 searchResults.map((t) => (
-                  <PassengerTripCard key={t.id || t._id} trip={t} availableDiscounts={referralStats.availableDiscounts} onBook={handleBookRide} />
+                  <PassengerTripCard 
+  key={t.id || t._id} 
+  trip={t} 
+  user={user} // 🎯 Pass the whole user object
+  onBook={handleBookRide} 
+/>
                 ))
               ) : (
                 <div className="py-32 text-center bg-white rounded-[50px] border border-slate-100 shadow-sm">

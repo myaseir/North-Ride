@@ -3,17 +3,17 @@ import React, { useState, useEffect } from 'react';
 import { Clock, User, ArrowRight, Star, MapPin, Calendar } from 'lucide-react';
 import BookingModal from './BookingModal';
 
-export default function PassengerTripCard({ trip, availableDiscounts, onBook }) {
+export default function PassengerTripCard({ trip,user, availableDiscounts, onBook }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   // 🕵️‍♂️ DEBUGGING: Monitor incoming backend keys
-  useEffect(() => {
-    console.log(`[Card Sync] Trip ID: ${trip.id?.slice(-4)}`, {
-      raw_time: trip.time,
-      raw_date: trip.date,
-      departure_iso: trip.departure_time
-    });
-  }, [trip]);
+  // useEffect(() => {
+  //   console.log(`[Card Sync] Trip ID: ${trip.id?.slice(-4)}`, {
+  //     raw_time: trip.time,
+  //     raw_date: trip.date,
+  //     departure_iso: trip.departure_time
+  //   });
+  // }, [trip]);
 
   // --- DATA EXTRACTION ---
   const basePricePerSeat = trip.fare || trip.price || 0;
@@ -142,6 +142,7 @@ export default function PassengerTripCard({ trip, availableDiscounts, onBook }) 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         trip={trip}
+        user={user}
         availableDiscounts={availableDiscounts}
         onConfirm={onBook} 
       />

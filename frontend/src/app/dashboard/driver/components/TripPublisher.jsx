@@ -63,12 +63,13 @@ export default function TripPublisher({ onPublish, loading }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (isTripValid) {
+      const universalDepartureTime = `${formData.date}T${formData.time}`;
       const payload = {
         origin: formData.origin,
         destination: formData.destination,
         date: formData.date,           
         time: formData.time,           
-        departure_time: new Date(`${formData.date}T${formData.time}`).toISOString(),
+        departure_time: universalDepartureTime,
         price: Number(formData.price),
         base_price: Number(formData.price),
         total_seats: 4,
