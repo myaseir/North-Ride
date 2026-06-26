@@ -2,8 +2,10 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from app.core.security import decode_access_token
 from app.db.redis import redis_mgr 
+from app.db.redis import redis_client
 from app.core.config import settings
 import logging
+from app.repositories.user_repo import UserRepository
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -93,12 +95,21 @@ def get_rating_service():
     
     return RatingService(
         booking_repo=BookingRepository(),
-        user_repo=UserRepository()
+        user_repo=UserRepository(),
+        redis_client=redis_client # This was correct
     )
+def get_user_repo() -> UserRepository:
+    """
+    Returns an instance of UserRepository.
+    This allows you to inject the repository into your routes 
+    using FastAPI's Depends() system.
+    """
+    return UserRepository()
 
 def get_trip_service():
     from app.services.trip_service import TripService
-    return TripService()
+    # 🎯 FIX: You must inject the redis_client here as well!
+    return TripService(redis_client=redis_client) 
 
 def get_booking_repo():
     from app.repositories.booking_repo import BookingRepository

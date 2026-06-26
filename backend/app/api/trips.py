@@ -38,10 +38,34 @@ class PayoutAction(BaseModel):
 class PriceUpdateSchema(BaseModel):
     new_price: float = Field(..., gt=0, description="The updated price for remaining seats")  
     
+# @router.get("/price-breakdown")
+# async def get_price_breakdown(
+#     trip_id: str, 
+#     seats: int, 
+#     use_discount: bool,
+#     current_user: dict = Depends(get_current_user)
+# ):
+#     # 1. Fetch trip and user data
+#     trip = await trip_service.trip_repo.get_by_id(trip_id)
+#     # Get the user loyalty data (assuming it's in your user object)
+#     user_loyalty = current_user.get("loyalty_meta", {})
+    
+#     # 2. Use the PricingService logic we discussed
+#     pricing = PricingService.calculate_final_price(
+#         base_price=float(trip["price"]) * seats,
+#         referral_count=user_loyalty.get("referral_count", 0),
+#         tier=user_loyalty.get("tier", "Bronze"),
+#         use_discount=use_discount
+#     )
+    
+#     return {
+#         "final_price": pricing["final_price"],
+#         "advance_payment": pricing["final_price"] * 0.20
+    # }
 class TripCreate(BaseModel):
     origin: str
     destination: str
-    departure_time: datetime
+    departure_time: str
     price: float  # 👈 Make sure this line is explicitly added here!
     base_price: Optional[float] = None
     total_seats: int = 4
@@ -55,6 +79,13 @@ async def publish_trip(data: TripCreate, current_user: dict = Depends(get_curren
 
     trip_dict = data.model_dump()
     
+    if "departure_time" in trip_dict:
+        # Assuming departure_time is in ISO format "2026-06-26T16:00"
+        dt_val = trip_dict["departure_time"]
+        if "T" in dt_val:
+            trip_dict["time"] = dt_val.split('T')[1] 
+        else:
+            trip_dict["time"] = dt_val
     # 🎯 FIX THE 422 MISMATCH:
     # Safely duplicate 'price' and 'base_price' so your search and repository aggregations
     # can access either structural key seamlessly depending on history or manifest view states.
@@ -253,10 +284,10 @@ async def book_trip(payload: BookingCreate, current_user: dict = Depends(get_cur
         passenger_name = current_user.get("full_name") or current_user.get("username")
         passenger_phone = current_user.get("phone") or current_user.get("phone_number")
 
-        logger.info(f"Processing booking for {passenger_name}. Amount Received: {payload.amount_paid}")
+        logger.info(f"Processing booking for {passenger_name}. Discount requested: {payload.use_discount}")
 
-        # 🎯 FIX: Use explicit keyword arguments for EVERYTHING
-        # This prevents the "missing 1 required positional argument" error on Vercel
+        # 🎯 Update the call to include 'use_discount'
+        # The service will now perform the math server-side based on the user's loyalty tier
         booking_id = await trip_service.book_seat(
             user_id=str(current_user["_id"]),
             passenger_name=passenger_name, 
@@ -266,7 +297,10 @@ async def book_trip(payload: BookingCreate, current_user: dict = Depends(get_cur
             transaction_id=payload.transactionId,
             seat_layout=payload.seat_layout,
             account_number=payload.account_number, 
-            amount_paid=payload.amount_paid        
+            use_discount=payload.use_discount,
+            amount_paid=payload.amount_paid, # Keep this for logging/verification
+            
+            
         )
 
         return {"status": "success", "booking_id": booking_id}
@@ -274,9 +308,10 @@ async def book_trip(payload: BookingCreate, current_user: dict = Depends(get_cur
     except HTTPException as he:
         raise he
     except Exception as e:
-        # 🎯 LOGGING: This will tell you exactly what went wrong in Vercel logs
         logger.error(f"Booking Route Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    
+
 
 @router.get("/history")
 async def get_unified_history(
@@ -492,5 +527,7 @@ async def admin_process_payout(
         action=payload.action, 
         transfer_ref=payload.transfer_ref
     )
+    
+
 
 

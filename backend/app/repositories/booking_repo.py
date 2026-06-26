@@ -10,7 +10,8 @@ logger = logging.getLogger("uvicorn.error")
 
 class BookingRepository:
     def __init__(self):
-        pass
+        from app.repositories.user_repo import UserRepository # Lazy import to avoid circular dependencies
+        self.user_repo = UserRepository()
 
     def _to_id(self, id_val: Any) -> Optional[ObjectId]:
         """Safe conversion of string/any to MongoDB ObjectId."""
@@ -62,7 +63,9 @@ class BookingRepository:
         trx_id: str, 
         seat_layout: list,
         account_number: str,
-        sender_name: str = None
+        sender_name: str = None,
+        use_discount: bool = False
+        
     ):
         FRONT_SEAT_SURCHARGE = 2500
         
@@ -98,6 +101,7 @@ class BookingRepository:
             "account_number": account_number,
             "status": "pending",
             "has_premium_seat": has_front_seat,
+            "use_discount": use_discount,
             "created_at": datetime.now(timezone.utc)
         }
 
@@ -128,19 +132,28 @@ class BookingRepository:
             await self.trips.update_one(
                 {
                     "_id": self._to_id(booking["trip_id"]), 
-                    "passengers.passenger_id": str(p_id) 
+                    "passengers.passenger_id": str(p_id) # Keeps the safety shield so MongoDB doesn't crash
                 },
                 {
                     "$set": {
-                        "passengers.$.status": "confirmed",
-                        "passengers.$.final_driver_name": data.get("name"),
-                        "passengers.$.final_driver_phone": data.get("contact_1"),
-                        "passengers.$.final_car_details": data.get("car_details")
+                        "passengers.$[elem].status": "confirmed",
+                        "passengers.$[elem].final_driver_name": data.get("name"),
+                        "passengers.$[elem].final_driver_phone": data.get("contact_1"),
+                        "passengers.$[elem].final_car_details": data.get("car_details")
                     }
-                }
+                },
+                array_filters=[{"elem.passenger_id": str(p_id)}] # Updates EVERY seat for this passenger
             )
         return True
-
+    # Inside your completion/verification logic:
+    async def reward_user_for_trip(self, passenger_id: str):
+    # Only increment the counter. Do not calculate discounts here.
+        await db.db.users.find_one_and_update(
+            {"_id": self._to_id(passenger_id)},
+            {"$inc": {"loyalty_meta.completed_trips": 1}},
+            return_document=ReturnDocument.AFTER
+    )
+    # Repository finished its job.
     async def get_trip_manifest(self, trip_id: str) -> List[dict]:
         cursor = self.collection.find({
             "trip_id": self._to_id(trip_id),
@@ -252,36 +265,41 @@ class BookingRepository:
             },
             {"$unwind": {"path": "$user_info", "preserveNullAndEmptyArrays": True}},
             {
-                "$project": {
-                    "id": {"$toString": "$_id"},
-                    "_id": {"$toString": "$_id"},
-                    "passenger_name": "$passenger_name",
-                    "status": 1,
-                    "amount": "$total_price",       
-                    "amount_paid": 1,               
-                    "trx_id": { "$ifNull": ["$transactionId", "$trx_id"] },
-                    "sender_name": { "$ifNull": ["$sender_name", "--- DATA MISSING IN DB ---"] },
-                    "account_no": { "$ifNull": ["$account_number", "$account_no"] },
-                    "created_at": {"$toString": "$created_at"},
-                    "trip_id": {"$toString": "$trip_id"},
-                    "passenger_id": {"$toString": "$passenger_id"},
-                    "listing_driver_id": {"$toString": "$user_info._id"},
-                    "listing_driver_name": { "$ifNull": ["$user_info.username", "Unknown Driver"] },
-                    "listing_driver_phone": {
-                        "$ifNull": [
-                            { "$arrayElemAt": ["$user_info.driver_profile.contacts", 0] },
-                            { "$ifNull": ["$user_info.phone_number", "No Phone"] }
-                        ]
-                    },
-                    "listing_car_details": {
-                        "$concat": [
-                            { "$ifNull": ["$user_info.driver_profile.vehicle.make_model", "Vehicle"] },
-                            " - ",
-                            { "$ifNull": ["$user_info.driver_profile.vehicle.plate_number", "N/A"] }
-                        ]
-                    }
-                }
-            },
+    "$project": {
+        "id": {"$toString": "$_id"},
+        "_id": {"$toString": "$_id"},
+        "passenger_name": "$passenger_name",
+        "status": 1,
+        "amount": "$total_price",       
+        "amount_paid": 1,               
+        "trx_id": { "$ifNull": ["$transactionId", "$trx_id"] },
+        "sender_name": { "$ifNull": ["$sender_name", "--- DATA MISSING IN DB ---"] },
+        "account_no": { "$ifNull": ["$account_number", "$account_no"] },
+        "created_at": {"$toString": "$created_at"},
+        "trip_id": {"$toString": "$trip_id"},
+        
+        # 🎯 ADD THESE TWO LINES TO PROJECT THE TIME
+        "departure_time": "$trip_info.departure_time",
+        "trip_date": "$trip_info.date",
+        
+        "passenger_id": {"$toString": "$passenger_id"},
+        "listing_driver_id": {"$toString": "$user_info._id"},
+        "listing_driver_name": { "$ifNull": ["$user_info.username", "Unknown Driver"] },
+        "listing_driver_phone": {
+            "$ifNull": [
+                { "$arrayElemAt": ["$user_info.driver_profile.contacts", 0] },
+                { "$ifNull": ["$user_info.phone_number", "No Phone"] }
+            ]
+        },
+        "listing_car_details": {
+            "$concat": [
+                { "$ifNull": ["$user_info.driver_profile.vehicle.make_model", "Vehicle"] },
+                " - ",
+                { "$ifNull": ["$user_info.driver_profile.vehicle.plate_number", "N/A"] }
+            ]
+        }
+    }
+},
             {"$sort": {"created_at": -1}}
         ]
         return await self.collection.aggregate(pipeline).to_list(length=100)
@@ -435,3 +453,45 @@ class BookingRepository:
             }}
         )
         return result.modified_count
+    
+    # ADD TO BookingRepository in booking_repo.py
+    async def get_passenger_trip_thread(self, passenger_id: str, trip_id: str) -> List[dict]:
+        """Fetches all existing bookings for a passenger on a specific trip."""
+        cursor = self.collection.find({
+            "passenger_id": self._to_id(passenger_id),
+            "trip_id": self._to_id(trip_id),
+            "status": {"$in": ["confirmed", "pending"]}
+        })
+        results = await cursor.to_list(length=10)
+        return [self._format_booking(r) for r in results]
+    
+    async def reject_and_refund(self, booking_id: str, reason: str = "Admin rejected"):
+        """
+        Manually trigger a rejection and refund for a specific booking.
+        """
+        booking = await self.collection.find_one({"_id": self._to_id(booking_id)})
+        if not booking: return False
+        
+        # 1. Release seats if it was confirmed
+        if booking["status"] == "confirmed":
+            seats_to_release = len(booking.get("seat_layout", [1]))
+            await self.trips.update_one(
+                {"_id": booking["trip_id"]},
+                {
+                    "$inc": {"available_seats": seats_to_release},
+                    "$pull": {
+                        "passengers": {"passenger_id": booking["passenger_id"]}
+                    }
+                }
+            )
+            
+        # 2. Update booking status
+        await self.collection.update_one(
+            {"_id": self._to_id(booking_id)},
+            {"$set": {
+                "status": "cancelled",
+                "cancellation_reason": reason,
+                "cancelled_at": datetime.now(timezone.utc)
+            }}
+        )
+        return True

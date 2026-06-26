@@ -10,7 +10,14 @@ logger = logging.getLogger("uvicorn.error")
 class TripRepository:
     def __init__(self):
         pass
-
+        
+    @property
+    def collection(self):
+        # 🎯 This is a dynamic getter. 
+        # It fetches the collection every time you need it, 
+        # ensuring 'db.trips' is ready by the time the request hits.
+        return db.trips
+    
     def _to_id(self, id_val: Any) -> Optional[ObjectId]:
         """Safe conversion to ObjectId, handling strings and already-converted ObjectIds."""
         if not id_val: return None
@@ -22,17 +29,28 @@ class TripRepository:
             return None
 
     def _format_trip(self, trip: dict) -> dict:
-        """Helper to ensure IDs are strings for JSON serialization."""
-        if trip:
-            trip["id"] = str(trip.get("_id"))
-            trip["_id"] = trip["id"]
-            if "driver_id" in trip:
-                trip["driver_id"] = str(trip["driver_id"])
+        """Robust conversion of all ObjectIds to strings for JSON safety."""
+        if not trip:
+            return trip
+        
+        # Convert _id and id
+        if "_id" in trip:
+            trip["id"] = str(trip["_id"])
+            trip["_id"] = str(trip["_id"])
+            
+        # Convert driver_id
+        if "driver_id" in trip and isinstance(trip["driver_id"], ObjectId):
+            trip["driver_id"] = str(trip["driver_id"])
+            
+        # 🎯 CRITICAL: Catch any other fields that might be an ObjectId
+        # This handles the fields added by $lookup or $addFields
+        for key, value in trip.items():
+            if isinstance(value, ObjectId):
+                trip[key] = str(value)
+                
         return trip
 
-    @property
-    def collection(self):
-        return db.db.trips
+    
 
     async def create_trip(self, trip_data: dict) -> str:
         """
@@ -47,25 +65,19 @@ class TripRepository:
         trip_data["destination"] = trip_data.get("destination", "").strip().lower()
         
         # 🎯 THE TIMEZONE & 7-HOUR FIX
+        # 🎯 THE TIMEZONE & 7-HOUR FIX
         if "departure_time" in trip_data:
-            dt = trip_data["departure_time"]
+            # Simply cast to string to ensure database consistency.
+            # Do NOT parse/strftime/convert as that causes the shift.
+            trip_data["departure_time"] = str(trip_data["departure_time"])
             
-            # Convert ISO string to datetime object
-            if isinstance(dt, str):
-                dt_obj = datetime.fromisoformat(dt.replace('Z', '+00:00'))
-            else:
-                dt_obj = dt
-
-            # 1. PRESERVE DATE: Use provided date or extract from object
-            if "date" not in trip_data or not trip_data["date"]:
-                trip_data["date"] = dt_obj.strftime('%Y-%m-%d')
-            
-            # 2. PRESERVE TIME: Keep frontend time if provided, else format from object
-            if "time" not in trip_data or not trip_data["time"]:
-                trip_data["time"] = dt_obj.strftime('%H:%M')
-            
-            # Ensure the database stores the object for proper sorting
-            trip_data["departure_time"] = dt_obj
+            # Optional: Ensure the date field exists using the date provided by the frontend
+            if not trip_data.get("date"):
+                # If date is missing, parse it once just to fill the field
+                try:
+                    trip_data["date"] = trip_data["departure_time"].split('T')[0]
+                except:
+                    pass
         
         # 2. Set standard defaults
         trip_data["status"] = trip_data.get("status", "scheduled")
@@ -76,7 +88,10 @@ class TripRepository:
             trip_data["seat_layout"] = ["FL", "RL", "RC", "RR"]
         
         # 3. Insert into MongoDB
+        # In trip_repo.py, inside create_trip:
+        print(f"DEBUG: Attempting to insert trip: {trip_data}")
         result = await self.collection.insert_one(trip_data)
+        
         return str(result.inserted_id)
 
     

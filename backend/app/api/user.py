@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from app.core.deps import get_current_user
 from bson import ObjectId
-
+from app.repositories.user_repo import UserRepository
 router = APIRouter()
 
 def serialize_mongo(data):
@@ -30,3 +30,25 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     clean_user.pop("password_hash", None)
 
     return clean_user
+
+# In app/api/user.py
+
+@router.get("/referrals/my-status")
+async def get_my_referral_status(
+    current_user: dict = Depends(get_current_user),
+    user_repo: UserRepository = Depends(lambda: UserRepository())
+):
+    referral_code = current_user.get("personal_referral_code")
+    if not referral_code:
+        return {"referrals": []}
+
+    referrals = await user_repo.get_referrals_by_code(referral_code)
+    
+    # Format the data for the frontend
+    return [
+        {
+            "username": r.get("username"),
+            "status": "Completed" if r.get("loyalty_meta", {}).get("completed_trips", 0) > 0 else "Pending Ride",
+            "joined_at": r.get("created_at")
+        } for r in referrals
+    ]

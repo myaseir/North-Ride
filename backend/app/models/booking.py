@@ -8,8 +8,8 @@ class BookingCreate(BaseModel):
     transactionId: str
     senderName: str
     account_number: str
-    amount_paid: float   # This is the 100% total (Base + Surcharge)
-    apply_discount: bool = False
+    amount_paid: float
+    use_discount: bool
 
 class BookingUpdate(BaseModel):
     status: str 

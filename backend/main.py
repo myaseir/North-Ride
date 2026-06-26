@@ -39,7 +39,8 @@ app.add_middleware(
     allow_origins=[
         "https://north-ride-ur4q.vercel.app", 
         "https://admin-northride.vercel.app", 
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://localhost:3001"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -109,16 +110,17 @@ async def root():
     }
 
 # --- PASSENGER ACTIVITY ENDPOINTS ---
+app.include_router(user_router, prefix="/api/users")
 
-@app.get("/api/users/me")
-async def get_me(current_user: dict = Depends(get_current_user)):
-    # Convert MongoDB ObjectId to a string
-    current_user["id"] = str(current_user["_id"])
+# @app.get("/api/users/me")
+# async def get_me(current_user: dict = Depends(get_current_user)):
+#     # Convert MongoDB ObjectId to a string
+#     current_user["id"] = str(current_user["_id"])
     
-    # Remove the original _id because it's still an ObjectId type
-    del current_user["_id"]
+#     # Remove the original _id because it's still an ObjectId type
+#     del current_user["_id"]
     
-    return current_user
+#     return current_user
 
 @app.get("/api/passengers/rides")
 async def get_ride_history(current_user: dict = Depends(get_current_user)):

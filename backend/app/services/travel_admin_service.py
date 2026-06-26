@@ -4,6 +4,8 @@ from app.services.notification_service import NotificationService
 from app.repositories.trip_repo import TripRepository
 from app.db.redis import redis_mgr  # 🎯 IMPORT REDIS
 import logging
+from bson import ObjectId
+from typing import Optional, Any
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -15,6 +17,13 @@ class TravelAdminService:
         self.notif_service = NotificationService()
         self.redis = redis_mgr # 🎯 INITIALIZE REDIS
 
+    def _to_id(self, id_val: Any) -> Optional[ObjectId]:
+        """Safe conversion of string/any to MongoDB ObjectId."""
+        if not id_val: return None
+        try:
+            return ObjectId(str(id_val)) if ObjectId.is_valid(str(id_val)) else None
+        except Exception:
+            return None
     async def verify_and_confirm_booking(self, booking_id: str, driver_id: str, overwrites: dict = None):
         """
         The Fixed 'Gold Flow': 
@@ -87,3 +96,107 @@ class TravelAdminService:
             "driver_assigned": final_overwrites["name"],
             "car": final_overwrites["car_details"]
         }
+        
+    
+    
+    async def get_all_fleet_trips(self):
+        """Fetches all trips for the admin radar, including the full passenger manifest."""
+        pipeline = [
+            {"$sort": {"created_at": -1}},
+            {"$limit": 150},
+            {
+                # Join the bookings collection to get exactly who booked
+                "$lookup": {
+                    "from": "bookings",
+                    "localField": "_id",
+                    "foreignField": "trip_id",
+                    "as": "manifest"
+                }
+            }
+        ]
+        
+        trips = await self.trip_repo.collection.aggregate(pipeline).to_list(length=150)
+        
+        formatted = []
+        for t in trips:
+            ft = self.trip_repo._format_trip(t)
+            
+            # Clean and attach the manifest
+            manifest_clean = []
+            confirmed_pax_count = 0
+            
+            for b in t.get("manifest", []):
+                clean_b = self.booking_repo._format_booking(b)
+                manifest_clean.append(clean_b)
+                
+                # Accurately count seats taken by confirmed passengers
+                if clean_b.get("status") in ["confirmed", "completed"]:
+                    confirmed_pax_count += len(clean_b.get("seat_layout", [1]))
+            
+            ft["manifest"] = manifest_clean
+            ft["confirmed_pax_count"] = confirmed_pax_count
+            formatted.append(ft)
+            
+        return formatted
+
+    async def force_trip_status(self, trip_id: str, new_status: str):
+        """ADMIN OVERRIDE: Manually forces a trip into a new state."""
+        from datetime import datetime, timezone
+
+        trip = await self.trip_repo.get_by_id(trip_id)
+        if not trip: return {"success": False, "error": "Trip not found."}
+
+        # 1. FORCE START
+        if new_status == "in-progress":
+            await self.trip_repo.update_trip_status(trip_id, "in-progress")
+            return {"success": True, "message": "Trip manually started."}
+
+        # 2. FORCE COMPLETE
+        elif new_status == "completed":
+            # 🎯 1. FETCH MANIFEST FIRST
+            manifest = await self.booking_repo.get_trip_manifest(trip_id)
+            
+            # 🎯 2. INCREMENT LOYALTY & RESET DISCOUNT
+            for b in manifest:
+                p_id = str(b.get("passenger_id"))
+                if p_id and p_id != "None":
+                    # Existing loyalty logic
+                    await self.user_repo.increment_completed_trips(p_id)
+                    await self.user_repo.set_active_trip(p_id, None)
+                    
+                    # 🎯 NEW: Reset referral count ONLY if this specific booking used a discount
+                    if b.get("use_discount") == True:
+                        await self.user_repo.collection.update_one(
+                            {"_id": self._to_id(p_id)},
+                            {"$set": {"loyalty_meta.referral_count": 0}}
+                        )
+                        logger.info(f"Discount consumed for passenger {p_id} via Admin Force-Complete.")
+
+            # 3. NOW UPDATE STATUS
+            await self.trip_repo.update_trip_status(trip_id, "completed")
+            await self.booking_repo.collection.update_many(
+                {"trip_id": self.booking_repo._to_id(trip_id), "status": "confirmed"},
+                {"$set": {
+                    "status": "completed", 
+                    "payout_status": "pending", 
+                    "completed_at": datetime.now(timezone.utc)
+                }}
+            )
+            
+            # 4. Unlink driver
+            d_id = str(trip.get("driver_id"))
+            if d_id and d_id != "None":
+                await self.user_repo.set_active_trip(d_id, None)
+
+            return {"success": True, "message": "Trip manually completed. Ledger and Loyalty updated."}
+        
+        # 3. FORCE CANCEL / REJECT
+        elif new_status == "cancelled":
+            await self.trip_repo.update_trip_status(trip_id, "cancelled")
+            await self.booking_repo.collection.update_many(
+                {"trip_id": self.booking_repo._to_id(trip_id), "status": {"$in": ["pending", "confirmed"]}},
+                {"$set": {"status": "cancelled", "cancellation_reason": "Admin manually cancelled trip"}}
+            )
+            return {"success": True, "message": "Trip cancelled and bookings voided."}
+
+        return {"success": False, "error": "Invalid status."}

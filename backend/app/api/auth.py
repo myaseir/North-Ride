@@ -8,12 +8,22 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, s
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, EmailStr
 from upstash_redis.asyncio import Redis 
-
+from app.services.trip_service import TripService
+from app.core.deps import get_user_repo
+from app.core.deps import get_trip_service
 from app.core import security
 from app.core.config import settings
 from app.repositories.user_repo import UserRepository
 from app.core.email import send_otp_email
+import random
+import string
 
+def generate_personal_code(username: str) -> str:
+    """Generates a clean, readable code like YAS-49V2"""
+    clean_name = "".join(e for e in username if e.isalnum()).upper()
+    prefix = clean_name[:3].ljust(3, 'X') # Uses first 3 letters of name
+    suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+    return f"{prefix}-{suffix}"
 # --- CONFIGURATION ---
 cloudinary.config(
     cloud_name=settings.CLOUDINARY_CLOUD_NAME,
@@ -40,10 +50,16 @@ class VerifyOTPRequest(BaseModel):
     email: EmailStr
     otp_code: str
 
+class VerifyResetCodeRequest(BaseModel):
+    email: EmailStr
+    code: str
+
 class RegisterRequest(BaseModel):
     username: str
     email: EmailStr
     password: str
+    fingerprint: Optional[str] = None  # 🎯 ADD THIS
+    referral_code: Optional[str] = None # 🎯 ADD THIS
 
 # --- HELPER: Cloudinary Async Wrapper ---
 async def upload_asset_async(file_obj, folder: str):
@@ -136,20 +152,29 @@ async def verify_otp(request: VerifyOTPRequest):
     return {"msg": "Email verified. Proceed to registration."}
 
 @router.post("/register")
-async def register_passenger(request: RegisterRequest):
-    # 1. Security: Ensure OTP step was completed
+async def register_passenger(
+    request: RegisterRequest, 
+    trip_service = Depends(get_trip_service),
+    repo = Depends(get_user_repo) # 🎯 Best practice: Inject the repo
+):
+    # 1. Security: OTP Check
     is_verified = await redis_client.get(f"verified_status:{request.email}")
     if not is_verified:
-        raise HTTPException(status_code=401, detail="Email not verified via OTP.")
+        raise HTTPException(status_code=401, detail="Email not verified.")
 
-    repo = UserRepository()
+    # 2. Referral Logic: Resolve ID early
+    referrer = None
+    if request.referral_code:
+        referrer = await repo.get_by_referral_code(request.referral_code)
+        if not referrer:
+            raise HTTPException(status_code=400, detail="Invalid referral code.")
 
-    # 2. Check if user already exists
+    # 3. Duplicate Check
     existing_user = await repo.get_by_email(request.email)
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered.")
 
-    # 3. Prepare Passenger Document
+ # 4. Prepare User Document
     user_document = {
         "username": request.username,
         "email": request.email,
@@ -157,16 +182,34 @@ async def register_passenger(request: RegisterRequest):
         "roles": ["PASSENGER"],
         "is_email_verified": True,
         "created_at": datetime.now(timezone.utc),
-        "active_trip_id": None
+        "active_trip_id": None,
+        "device_fingerprint": request.fingerprint, 
+        "personal_referral_code": generate_personal_code(request.username),
+        
+        "loyalty_meta": {
+            "completed_trips": 0, 
+            "referral_count": 0, 
+            "tier": "Bronze"
+        },
+        "referred_by": request.referral_code if request.referral_code else None
     }
 
-    # 4. Save and Cleanup
+    # 5. Save User
     user_id = await repo.create_user(user_document)
+
+    # 6. Referral Loyalty Integration (Pass the ID, not the code)
+    if referrer:
+        await trip_service.process_referral(
+            referrer_id=str(referrer["_id"]), # 🎯 Correct: Passing the actual ID
+            new_user_id=str(user_id),
+            fingerprint=request.fingerprint
+        )
+
+    # 7. Cleanup Redis
     await redis_client.delete(f"verified_status:{request.email}")
     await redis_client.delete(f"otp:{request.email}")
 
     return {"msg": "Registration successful!", "user_id": str(user_id)}
-
 @router.post("/register-driver")
 async def register_driver(
     username: str = Form(...),
@@ -271,11 +314,18 @@ async def forgot_password(request: ForgotPasswordRequest):
     return {"msg": "Reset code dispatched."}
 
 @router.post("/password/verify-code")
-async def verify_reset_code(email: str, code: str): # FastAPI expects these as Query params now
+async def verify_reset_code(request: VerifyResetCodeRequest):
+    # Ensure email consistency
+    email = request.email.lower()
+    
     stored_otp = await redis_client.get(f"reset:{email}")
     
-    if not stored_otp or str(stored_otp) != code:
-        raise HTTPException(status_code=400, detail="Invalid or expired reset code.")
+    # Use .strip() to handle potential hidden whitespace issues
+    if not stored_otp or str(stored_otp).strip() != str(request.code).strip():
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid or expired reset code."
+        )
     
     return {"msg": "Code verified."}
 

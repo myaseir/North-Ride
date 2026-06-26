@@ -2,19 +2,43 @@ from __future__ import annotations
 from app.repositories.trip_repo import TripRepository
 from app.repositories.booking_repo import BookingRepository
 from app.repositories.user_repo import UserRepository  # 🎯 Added
-from app.db.redis import redis_mgr 
+from app.repositories.trip_repo import TripRepository
+from app.db.redis import redis_client
+from app.db.redis import redis_mgr
+from app.db.mongodb import db 
+from pymongo import ReturnDocument
+
+from app.core.config import settings
 from fastapi import HTTPException, status
 import logging
+# Add this line to the top of your file
+from typing import Optional, List, Any
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 logger = logging.getLogger("uvicorn.error")
 
 class TripService:
-    def __init__(self):
+    def __init__(self, redis_client=None):
         self.trip_repo = TripRepository()
         self.booking_repo = BookingRepository()
         self.user_repo = UserRepository()  # 🎯 Initialized
-        self.redis = redis_mgr 
+        self.redis = redis_client
+        self.redis_manager = redis_mgr
+
+    @property
+    def collection(self):
+        # This access is safe because it only runs when you call a method
+        return db.db["trips"]
+        
+        
+    # Add this to TripService class
+    # Add this to the TripService class in app/services/trip_service.py
+    def _to_id(self, id_val: Any) -> Optional[ObjectId]:
+        if not id_val: return None
+        try:
+            return ObjectId(str(id_val)) if ObjectId.is_valid(str(id_val)) else None
+        except Exception:
+            return None
 
     async def create_new_trip(self, trip_data: dict):
         """
@@ -52,25 +76,57 @@ class TripService:
         return str(trip_id)
 
     async def book_seat(self, user_id: str, passenger_name: str, passenger_phone: str, 
-                        sender_name: str, trip_id: str, transaction_id: str, 
-                        seat_layout: list[str], account_number: str, amount_paid: float):
+                    sender_name: str, trip_id: str, transaction_id: str, 
+                    seat_layout: list[str], account_number: str, use_discount: bool, 
+                    amount_paid: float): # 🎯 Add this
         
-        # 1. Standardize IDs to strings (Crucial for Vercel)
+        frontend_amount = amount_paid
         t_id = str(trip_id)
         u_id = str(user_id)
 
-        # 2. Initial Trip Check
+        # 1. Fetch Trip & User Data (The Source of Truth)
         trip = await self.trip_repo.get_by_id(t_id)
+        user = await self.user_repo.collection.find_one({"_id": self._to_id(u_id)})
+        
         if not trip:
             raise HTTPException(status_code=404, detail="Trip not found")
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
 
-        # Pass user_id as the third argument so Redis knows who owns the lock
-        lock_acquired = await self.redis.acquire_seat_locks(trip_id, seat_layout, user_id)
-
+        # 2. 🎯 SECURE BACKEND PRICING CALCULATION
+        loyalty = user.get("loyalty_meta", {})
+        logger.info(f"DEBUG: Trip Data Received: {trip}")
+        # Get the breakdown dict
+        base_val = float(trip.get("price") or trip.get("base_price") or 0)
+        
+        breakdown = self.calculate_price_breakdown(
+            base_price=base_val,
+            loyalty_meta=loyalty,
+            use_discount=use_discount,
+            seat_layout=seat_layout
+        
+        )
+        
+        # Extract just the float value
+        final_amount = breakdown["final_price"]
+        
+        if abs(final_amount - frontend_amount) > 1.0:
+            logger.warning(f"PRICE MISMATCH: Frontend sent {frontend_amount}, Backend calculated {final_amount}")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, 
+                detail={
+                    "code": "PRICE_CHANGED", 
+                    "message": "The trip fare has been updated.", 
+                    "new_price": final_amount
+                }
+            )
+        
+        # 3. Locking logic (Keep your existing lock code...)
+        lock_acquired = await self.redis_manager.acquire_seat_locks(t_id, seat_layout, u_id)
         if not lock_acquired:
             # 🎯 VERCEL FIX: Check if the existing lock belongs to THIS user
             # If they refreshed the page, don't lock them out of their own hold.
-            is_mine = await self.redis.client.get(f"lock:trip:{t_id}:seat:{seat_layout[0]}")
+            is_mine = await self.redis_manager.client.get(f"lock:trip:{t_id}:seat:{seat_layout[0]}")
             if is_mine != u_id:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT, 
@@ -87,15 +143,17 @@ class TripService:
 
             # 5. Create the Booking
             booking_id = await self.booking_repo.create_pending(
+            
                 user_id=u_id,
                 passenger_name=passenger_name,
                 passenger_phone=passenger_phone,
                 sender_name=sender_name,
                 trip_id=t_id,
-                amount=amount_paid,      
+                amount=final_amount,  # 🎯 REPLACED amount_paid with final_amount
                 trx_id=transaction_id,
                 seat_layout=seat_layout,
-                account_number=account_number 
+                account_number=account_number ,
+                use_discount=use_discount
             )
 
             if booking_id == "SEATS_TAKEN":
@@ -115,7 +173,7 @@ class TripService:
             return booking_id
 
         except Exception as e:
-            await self.redis.release_seat_locks(t_id, seat_layout)
+            await self.redis_manager.release_seat_locks(t_id, seat_layout)
             if isinstance(e, HTTPException): raise e
             logger.error(f"Booking Error: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to process booking.")
@@ -189,7 +247,6 @@ class TripService:
         if str(trip["driver_id"]) != str(driver_id):
             raise HTTPException(status_code=403, detail="Unauthorized.")
 
-        # Fetch Manifest BEFORE changing status to ensure we get confirmed passengers
         manifest = await self.booking_repo.get_trip_manifest(trip_id)
 
         # 1. Update Trip Status
@@ -212,18 +269,31 @@ class TripService:
             }
         )
 
-        # 3. 🎯 REVENUE CALCULATION: Use total_price (Base + Surcharge)
+        # 3. REVENUE CALCULATION
         total_revenue = sum(
             float(b.get("total_price", 0)) 
             for b in manifest 
             if b.get("status") in ["confirmed", "completed"]
         )
-
-        # 4. CLEANUP: Unlink all passengers and the driver
+        
+        # 4. CLEANUP: Unlink passengers and Reset Referral Counts
         for booking in manifest:
             passenger_id = str(booking.get("passenger_id"))
             if passenger_id and passenger_id != "None":
+                
+                # Perform existing cleanup
+                await self.user_repo.increment_completed_trips(passenger_id)
+                await self.booking_repo.reward_user_for_trip(passenger_id)
                 await self.user_repo.set_active_trip(passenger_id, None)
+
+                # 🎯 NEW: Reset referral count ONLY if this specific booking used a discount
+                # This ensures we only 'spend' the discount upon successful completion
+                if booking.get("use_discount") == True:
+                    await self.user_repo.collection.update_one(
+                        {"_id": self._to_id(passenger_id)},
+                        {"$set": {"loyalty_meta.referral_count": 0}}
+                    )
+                    logger.info(f"Referral discount consumed and reset for passenger {passenger_id}")
 
         await self.user_repo.set_active_trip(driver_id, None)
 
@@ -311,6 +381,9 @@ class TripService:
                 "rating": b.get("rating"), 
                 "review_text": b.get("review_text"),
                 "final_driver_name": b.get("final_driver_name", "Driver"),
+                # 🎯 ADD THESE TWO LINES
+                "final_driver_phone": b.get("final_driver_phone", "No Contact"),
+                "final_car_details": b.get("final_car_details", "Vehicle N/A"),
                 "has_premium_seat": "FL" in b.get("seat_layout", [])
             }
             enriched_history.append(ride_entry)
@@ -374,17 +447,19 @@ class TripService:
             date_string = current_day.strftime("%Y-%m-%d")
             
             for departure_time in times:
+                # 🎯 FIX: Construct the ISO string to match frontend expectations
+                iso_departure_string = f"{date_string}T{departure_time}"
+                
+                # 1. Update the payload structure
                 trip_payload = {
-                    # 🎯 THE FIX: Generate a real, brand-new, unique ObjectId on every iteration.
-                    # This satisfies the repo's _to_id validation check, prevents it from turning into null,
-                    # and completely clears the driver_id_1_status_1 index rule!
-                    "driver_id": ObjectId(), 
-                    
+                    "driver_id": None, 
+                    "managed_by_admin_id": self._to_id(admin_id),
                     "is_brokered": True,
                     "origin": origin,
                     "destination": destination,
                     "date": date_string,
                     "time": departure_time,
+                    "departure_time": iso_departure_string,  # 🎯 ADDED THIS
                     "total_seats": bulk_data.get("total_seats", 4),
                     "available_seats": bulk_data.get("total_seats", 4),
                     "base_price": float(bulk_data["base_price"]),
@@ -399,10 +474,89 @@ class TripService:
         logger.warning(f"🎰 GHOST FLEET ACTIVATED: {len(created_trip_ids)} trips seeded.")
         return created_trip_ids
 
+
+                
+
+
+    @staticmethod
+    def calculate_loyalty_tier(completed_trips: int) -> str:
+        if completed_trips >= 150: return "Master Hero"
+        if completed_trips >= 100: return "Diamond"
+        if completed_trips >= 50: return "Gold"
+        if completed_trips >= 20: return "Silver"
+        return "Bronze"
+
+    async def process_referral(self, referrer_id: str, new_user_id: str, fingerprint: str):
+    # 1. Check for duplicate devices (Fraud Prevention)
+        existing = await self.user_repo.find_user_by_fingerprint(fingerprint)
+        if existing:
+            await self.user_repo.create_audit_request(referrer_id, new_user_id, "Duplicate Device")
+            return "PENDING_AUDIT"
+    
+    # 2. Atomic Increment and Tier Update
+    # We use find_one_and_update to increment and get the NEW state in ONE query
+        updated_user = await self.user_repo.collection.find_one_and_update(
+            {"_id": ObjectId(referrer_id)},
+            {"$inc": {"loyalty_meta.referral_count": 1}},
+            return_document=ReturnDocument.AFTER
+        )
+    
+        if not updated_user:
+            return "ERROR_USER_NOT_FOUND"
+
+    # 3. Logic for Tier Promotion
+        current_count = updated_user.get("loyalty_meta", {}).get("referral_count", 0)
+        current_tier = updated_user.get("loyalty_meta", {}).get("tier", "Bronze")
+    
+    # Calculate the new tier
+        new_tier = self._calculate_tier(current_count)
+    
+    # Only update the database if the tier has actually changed (Saves database writes)
+        if new_tier != current_tier:
+            await self.user_repo.collection.update_one(
+                {"_id": ObjectId(referrer_id)},
+                {"$set": {"loyalty_meta.tier": new_tier}}
+            )
+            logger.info(f"User {referrer_id} promoted to {new_tier} tier!")
+
+        return "APPROVED"
+    
+    # In trip_service.py
+
+    def calculate_price_breakdown(self, base_price: float, loyalty_meta: dict, use_discount: bool, seat_layout: list):
+        FRONT_SEAT_SURCHARGE = 2500
+    
+    # 1. Total Base Calculation (This part is correct in your snippet)
+        total_base = 0
+        for seat_id in seat_layout:
+            total_base += (base_price + FRONT_SEAT_SURCHARGE) if seat_id == 'FL' else base_price
+    
+    # 2. MATCH THE FRONTEND LOGIC EXACTLY
+    # The frontend is only using referral logic. 
+    # If you want to include Tier discounts, you MUST update the frontend too.
+    # For now, let's match the frontend logic (only referrals):
+    
+        referral_count = loyalty_meta.get("referral_count", 0)
+        tiersEarned = referral_count // 4
+        referralDiscountPercent = min(tiersEarned * 0.10, 0.50) # Cap at 50%
+    
+    # 3. Apply logic using Math.floor to match frontend exactly
+        if use_discount:
+        # Using int() is equivalent to Math.floor() for positive numbers
+            final_price = int(total_base * (1 - referralDiscountPercent))
+        else:
+            final_price = int(total_base)
+    
+        return {
+            "final_price": float(final_price),
+            "discount_percent": referralDiscountPercent * 100
+        }
+    
 class RatingService:
-    def __init__(self, booking_repo, user_repo):
+    def __init__(self, booking_repo, user_repo, redis_client=None):
         self.booking_repo = booking_repo
         self.user_repo = user_repo
+        self.redis = redis_client
         
     async def get_popup_data(self, user_id: str):
         booking = await self.booking_repo.get_unrated_booking_for_popup(user_id)
@@ -412,7 +566,7 @@ class RatingService:
             "booking_id": str(booking.get("id")),
             "driver_name": booking.get("final_driver_name", "Driver"),
             "driver_id": str(booking.get("driver_id", ""))
-        }
+            }
 
     async def add_rating(self, booking_id: str, rating: int, review: str):
         await self.booking_repo.save_rating_results(booking_id, rating, review)
@@ -430,6 +584,3 @@ class RatingService:
                 
                 await self.user_repo.update_driver_average_rating(driver_id, new_avg, count)
                 
-                
-   
-    
