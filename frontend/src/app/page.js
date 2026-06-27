@@ -17,18 +17,18 @@ export default function Home() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const token   = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
-    if (token && userStr) {
-      try {
-        const u = JSON.parse(userStr);
-        router.push(u.roles?.includes('DRIVER') ? '/dashboard/driver' : '/dashboard/passenger');
-        return;
-      } catch {}
-    }
-    setLoading(false);
-  }, [router]);
+  // useEffect(() => {
+  //   const token   = localStorage.getItem('token');
+  //   const userStr = localStorage.getItem('user');
+  //   if (token && userStr) {
+  //     try {
+  //       const u = JSON.parse(userStr);
+  //       router.push(u.roles?.includes('DRIVER') ? '/dashboard/driver' : '/dashboard/passenger');
+  //       return;
+  //     } catch {}
+  //   }
+  //   setLoading(false);
+  // }, [router]);
 
   const handleLoginSuccess = (res) => {
     localStorage.setItem('token', res.access_token);
@@ -36,11 +36,11 @@ export default function Home() {
     router.push(res.user.roles?.includes('DRIVER') ? '/dashboard/driver' : '/dashboard/passenger');
   };
 
-  if (loading) return (
-    <div className="hp-loading" role="status" aria-label="Loading">
-      <Loader2 size={30} color="#34d399" className="hp-spin" />
-    </div>
-  );
+  // if (loading) return (
+  //   <div className="hp-loading" role="status" aria-label="Loading">
+  //     <Loader2 size={30} color="#34d399" className="hp-spin" />
+  //   </div>
+  // );
 
   return (
     <main className="hp-root">
