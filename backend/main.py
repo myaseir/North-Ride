@@ -38,6 +38,8 @@ app.add_middleware(
     # Add your Vercel URL here EXACTLY as it appears in the browser
     allow_origins=[
         "https://north-ride-ur4q.vercel.app", 
+        "https://northride.pk", 
+        "https://www.northride.pk",
         "https://admin-northride.vercel.app", 
         "http://localhost:3000",
         "http://localhost:3001"
