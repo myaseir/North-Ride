@@ -21,7 +21,7 @@ async def send_push_notification(heading: str, message: str):
     }
     payload = {
         "app_id": ONESIGNAL_APP_ID,
-        "include_player_ids": ["da9838f9-6b4f-447a-bf42-074a291bee15"], # Your phone's ID
+        "included_segments": ["Subscribed Users"], # This targets EVERYONE subscribed
         "headings": {"en": heading},
         "contents": {"en": message}
     }
