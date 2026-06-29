@@ -11,8 +11,8 @@ from app.models.booking import BookingCreate, BookingInDB
 from app.services.trip_service import TripService
 from app.services.trip_service import RatingService
 from app.repositories.booking_repo import BookingRepository  # 🎯 Import the class
-from app.core.deps import get_booking_repo                  # 🎯 Import the provider# 🎯 Import the class
-# In trip.py
+from app.core.deps import get_booking_repo     
+from app.api.notification import send_push_notification 
 from app.core.deps import (
     get_current_user, 
     get_trip_service, 
@@ -279,7 +279,9 @@ async def get_trip_manifest(trip_id: str, current_user: Optional[dict] = Depends
     }
 
 @router.post("/book")
-async def book_trip(payload: BookingCreate, current_user: dict = Depends(get_current_user)):
+async def book_trip(payload: BookingCreate,
+                    background_tasks: BackgroundTasks,
+                    current_user: dict = Depends(get_current_user)):
     try:
         passenger_name = current_user.get("full_name") or current_user.get("username")
         passenger_phone = current_user.get("phone") or current_user.get("phone_number")
@@ -302,7 +304,11 @@ async def book_trip(payload: BookingCreate, current_user: dict = Depends(get_cur
             
             
         )
-
+        background_tasks.add_task(
+            send_push_notification, 
+            "New Booking Alert! 🔔", 
+            f"New booking from {passenger_name} for Trip {payload.trip_id}."
+        )
         return {"status": "success", "booking_id": booking_id}
 
     except HTTPException as he:
