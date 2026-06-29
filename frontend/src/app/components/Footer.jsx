@@ -39,7 +39,7 @@ export default function Footer() {
            <div className="flex gap-3">
   {/* Instagram */}
   <a 
-    href="#" 
+    href="https://www.instagram.com/_northride.pk?igsh=cXE1aGpvNXl4eXJ6" 
     className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all border border-slate-200 shadow-sm"
   >
     <Instagram size={18} />
@@ -47,7 +47,7 @@ export default function Footer() {
 
   {/* Facebook */}
   <a 
-    href="#" 
+    href="https://www.facebook.com/share/1PYPKH7d7x/" 
     className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all border border-slate-200 shadow-sm"
   >
     <Facebook size={18} />
