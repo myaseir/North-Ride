@@ -19,7 +19,7 @@ export default function LegalLayout({ title = "", children }) {
       <div className="max-w-3xl mx-auto">
         <Link href="/" className="inline-flex items-center gap-2 text-slate-400 hover:text-green-500 transition-colors mb-12 group">
           <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Back to Arena</span>
+          <span className="text-[10px] font-black uppercase tracking-widest">Back to Home</span>
         </Link>
 
         <header className="mb-16">
@@ -35,11 +35,7 @@ export default function LegalLayout({ title = "", children }) {
         </div>
 
         {/* FIXED FOOTER TAGS BELOW */}
-        <footer className="mt-24 pt-12 border-t border-slate-100 text-center">
-          <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-300">
-            Official Policy • Glacia Connection 2026
-          </p>
-        </footer>
+        
       </div>
     </div>
   );

@@ -29,7 +29,7 @@ export default function AboutPage() {
           </div>
           
           <p className="text-base md:text-xl text-slate-500 leading-relaxed max-w-2xl mx-auto font-medium animate-[hp-fadein_0.6s_ease_out_450ms_both]">
-            North Ride connects you to Gilgit-Baltistan. We make traveling safe, simple, and comfortable for locals and tourists.
+            Your simple way to the North. Safe and comfortable rides to Gilgit-Baltistan for everyday travelers and tourists.
           </p>
         </div>
       </section>
@@ -82,12 +82,12 @@ export default function AboutPage() {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-16">
-          <ValueCard 
-            icon={<Users size={24} className="text-emerald-600" />} 
-            title="Happy Drivers" 
-            desc="We treat our drivers well and pay them fairly. A happy driver means a great trip for you." 
-            delayClass="animate-[hp-fadein_0.5s_ease_out_100ms_both]"
-          />
+        <ValueCard 
+  icon={<Users size={24} className="text-emerald-600" />} 
+  title="Empowered Drivers" 
+  desc="We provide a fair, transparent platform for independent drivers. When our drivers thrive, you get a better, safer journey." 
+  delayClass="animate-[hp-fadein_0.5s_ease_out_100ms_both]"
+/>
           <ValueCard 
             icon={<Shield size={24} className="text-emerald-600" />} 
             title="Always Safe" 
@@ -96,8 +96,8 @@ export default function AboutPage() {
           />
           <ValueCard 
             icon={<MapPin size={24} className="text-emerald-600" />} 
-            title="We Know the Roads" 
-            desc="We are from Mountains. We know the weather, the roads, and the mountains better than anyone." 
+            title="Local Expertise" 
+            desc="Our platform connects you with seasoned local drivers who know the routes, weather, and terrain better than anyone." 
             delayClass="animate-[hp-fadein_0.5s_ease_out_400ms_both]"
           />
         </div>
@@ -106,7 +106,7 @@ export default function AboutPage() {
       {/* --- CTA SECTION --- */}
       <section className="pb-24 px-6">
         <div className="max-w-4xl mx-auto text-center border-t border-slate-100 pt-20">
-          <h2 className="text-3xl md:text-4xl font-bold mb-10 tracking-tight text-slate-900">Three Ranges. One Road.</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-10 tracking-tight text-slate-900">Three Mountain Ranges. One Road.</h2>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link 

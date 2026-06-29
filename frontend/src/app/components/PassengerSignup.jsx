@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-
+import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import OTPVerification from './OTPVerification';
 import { getDeviceIdentifier } from '../utils/fingerprint';
-import { Mail, Lock, User, ArrowRight, Loader2, ChevronLeft, ShieldCheck, Gift } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, ChevronLeft, ShieldCheck, Gift, Check } from 'lucide-react';
 export default function PassengerSignup({ onBack, onComplete }) {
   const [fp, setFp] = useState(null);
+  // Add this near your other state variables (like 'loading')
+const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [step, setStep] = useState(1); // 1: Form, 2: OTP
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -189,22 +191,56 @@ useEffect(() => {
           </div>
 
           {/* Submit Button */}
-          <div className="pt-2">
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="w-full py-4 rounded-2xl font-semibold text-[13px] tracking-wide flex items-center justify-center gap-2 text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-900/10 transition-all active:scale-[0.98] uppercase disabled:opacity-70 disabled:active:scale-100"
-            >
-              {loading ? (
-                <Loader2 className="animate-spin" size={20} />
-              ) : (
-                <>
-                  Verify Email 
-                  <ArrowRight size={16} />
-                </>
-              )}
-            </button>
-          </div>
+         <div className="pt-2 space-y-5">
+  {/* Custom Checkbox Row */}
+  <div className="flex items-start gap-3 px-1">
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={acceptedTerms}
+      onClick={() => setAcceptedTerms(!acceptedTerms)}
+      className={`mt-0.5 w-[18px] h-[18px] rounded flex-shrink-0 flex items-center justify-center border transition-all duration-200 ${
+        acceptedTerms 
+          ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' 
+          : 'bg-white border-slate-300 text-transparent hover:border-emerald-500'
+      }`}
+    >
+      <Check size={12} strokeWidth={3} />
+    </button>
+    
+    <label 
+      className="text-[12px] text-slate-500 leading-relaxed cursor-pointer select-none"
+      onClick={() => setAcceptedTerms(!acceptedTerms)}
+    >
+      By continuing, I acknowledge that I have read and agree to North Ride's{' '}
+      <Link href="/terms" className="text-emerald-600 font-medium hover:text-emerald-700 hover:underline transition-colors">
+        Terms of Service
+      </Link>
+      {' '}and{' '}
+      <Link href="/privacy" className="text-emerald-600 font-medium hover:text-emerald-700 hover:underline transition-colors">
+        Privacy Policy
+      </Link>
+      .
+    </label>
+  </div>
+
+  {/* Submit Button */}
+  <button 
+    type="submit" 
+    // Button is disabled if it's loading OR if the terms aren't accepted
+    disabled={loading || !acceptedTerms}
+    className="w-full py-4 rounded-2xl font-semibold text-[13px] tracking-wide flex items-center justify-center gap-2 text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-900/10 transition-all active:scale-[0.98] uppercase disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed"
+  >
+    {loading ? (
+      <Loader2 className="animate-spin" size={20} />
+    ) : (
+      <>
+        Verify Email 
+        <ArrowRight size={16} />
+      </>
+    )}
+  </button>
+</div>
 
           {/* Footer Text */}
           <p className="text-center text-[11px] font-medium text-slate-400 px-2 leading-relaxed">

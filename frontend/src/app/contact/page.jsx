@@ -21,7 +21,7 @@ export default function ContactPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const recipient = "northride@gmail.com";
+    const recipient = "info.northride@gmail.com";
     const subjectLine = encodeURIComponent(formData.subject || "GlaciaGo / North Ride Support Inquiry");
     
     // Construct email body text layout elegantly
@@ -62,9 +62,9 @@ export default function ContactPage() {
             </div>
             
             <div className="anim-up anim-d3 space-y-6 inline-block lg:block text-left w-full max-w-md mx-auto lg:mx-0">
-              <ContactInfo icon={<Mail size={20} />} title="Email Support" detail="northride@gmail.com" />
-              <ContactInfo icon={<Phone size={20} />} title="Call Us" detail="+92 316 9030178" />
-              <ContactInfo icon={<MapPin size={20} />} title="Main Office" detail="Islamabad, Pakistan" />
+              <ContactInfo icon={<Mail size={20} />} title="Email Support" detail="info.northride@gmail.com" />
+              <ContactInfo icon={<Phone size={20} />} title="Call Us" detail="+92 371 5982735" />
+              {/* <ContactInfo icon={<MapPin size={20} />} title="Main Office" detail="Islamabad, Pakistan" /> */}
             </div>
           </div>
 

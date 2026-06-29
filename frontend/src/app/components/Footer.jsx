@@ -1,7 +1,7 @@
 "use client";
 
 import { 
-  Instagram, 
+  Instagram, Facebook,MessageCircle,
   ArrowUpRight, 
   Zap,
 } from 'lucide-react';
@@ -36,14 +36,34 @@ export default function Footer() {
             </div>
 
             {/* Social Links */}
-            <div className="flex gap-3">
-              <a 
-                href="#" 
-                className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all border border-slate-200 shadow-sm"
-              >
-                <Instagram size={18} />
-              </a>
-            </div>
+           <div className="flex gap-3">
+  {/* Instagram */}
+  <a 
+    href="#" 
+    className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all border border-slate-200 shadow-sm"
+  >
+    <Instagram size={18} />
+  </a>
+
+  {/* Facebook */}
+  <a 
+    href="#" 
+    className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all border border-slate-200 shadow-sm"
+  >
+    <Facebook size={18} />
+  </a>
+
+  {/* WhatsApp */}
+  <a 
+    href="https://wa.me/03715982735" 
+    target="_blank"
+    rel="noopener noreferrer"
+    className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-500 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-all border border-slate-200 shadow-sm"
+  >
+    {/* If using Lucide React, MessageCircle is often used for WhatsApp. Change this to <Whatsapp size={18} /> if your icon library supports it! */}
+    <MessageCircle size={18} />
+  </a>
+</div>
           </div>
 
           {/* NAV LINKS */}
@@ -61,20 +81,20 @@ export default function Footer() {
               links={[
                 { label: 'Travel Guide', href: '/blog' },
                 { label: 'Contact Us', href: '/contact' },
-                { label: 'Safety Rules', href: '#' },
+                { label: 'Safety Rules', href: '/safety' },
               ]} 
             />
             <FooterLinkGroup 
               title="About Us" 
               links={[
-                { label: 'Privacy Policy', href: '#' },
-                { label: 'Terms of Use', href: '#' },
+                { label: 'Privacy Policy', href: '/privacy' },
+                { label: 'Terms of Use', href: '/terms' },
               ]} 
             />
           </div>
 
           {/* SYSTEM STATUS */}
-          <div className="lg:col-span-2">
+          {/* <div className="lg:col-span-2">
             <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-3">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
@@ -85,7 +105,7 @@ export default function Footer() {
                 All Systems Working
               </p>
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* BOTTOM BAR */}
