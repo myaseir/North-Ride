@@ -534,6 +534,15 @@ async def admin_process_payout(
         transfer_ref=payload.transfer_ref
     )
     
+@router.get("/test-notification")
+async def test_notification():
+    result = await send_push_notification(
+        "Test from Vercel",
+        "If you see this, the Vercel deployment works.",
+        subscription_ids=["a9dece49-1daf-4d84-a0ba-7f89f88952b3"],
+    )
+    return {"result": result}
+    
 
 
 
