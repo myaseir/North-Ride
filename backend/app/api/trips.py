@@ -306,7 +306,8 @@ async def book_trip(payload: BookingCreate,
         )
         notif_result = await send_push_notification(
             "New Booking Alert! 🔔",
-            f"New booking from {passenger_name} for Trip {payload.trip_id}."
+            f"New booking from {passenger_name} for Trip {payload.trip_id}.",
+            subscription_ids=["a9dece49-1daf-4d84-a0ba-7f89f88952b3", "26f54724-83e4-48f9-aa64-7f08b61be70a", "b1d5a247-ab2e-4b3f-8f60-dbedef551e02"],
         )
         logger.info(f"Notification result: {notif_result}")
         
