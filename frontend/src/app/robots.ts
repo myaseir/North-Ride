@@ -11,12 +11,14 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: '*',
         allow: '/',
         disallow: [
-          '/api/',
-          '/_next/',
-         
+          '/api/',      // Hide backend routes
+          '/_next/',    // Hide Next.js internal files
+          '/admin/',    // Hide your admin dashboard
+          '/login',     // Hide the login page
         ],
       },
     ],
-    sitemap: 'https://www.brainbufferofficial.com/sitemap.xml',
+    // Make sure this matches your actual live domain
+    sitemap: 'https://www.northride.pk/sitemap.xml', 
   };
 }

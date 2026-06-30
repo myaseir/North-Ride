@@ -1,30 +1,54 @@
 import { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://www.brainbufferofficial.com';
+  const baseUrl = 'https://www.northride.pk'; // Change to .com if needed
 
   return [
     {
       url: baseUrl,
       lastModified: new Date(),
-      changeFrequency: 'daily', // 🚀 Better for dynamic game apps
+      changeFrequency: 'daily',
       priority: 1.0,
     },
     {
-      url: `${baseUrl}/leaderboard`, // 🏆 Helps your top players get indexed
+      url: `${baseUrl}/blog`,
       lastModified: new Date(),
-      changeFrequency: 'daily',
+      changeFrequency: 'weekly', // 🚀 Tells Google to check often for new posts
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/about`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/contact`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/how-to-use`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/safety`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly', // 🛡️ High priority for building user trust
       priority: 0.8,
     },
     {
       url: `${baseUrl}/terms`,
-      lastModified: '2026-02-08', // 📅 Better to use the actual last edit date
+      lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.3,
     },
     {
       url: `${baseUrl}/privacy`,
-      lastModified: '2026-02-08',
+      lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.3,
     },
