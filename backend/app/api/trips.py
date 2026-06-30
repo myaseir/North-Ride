@@ -304,12 +304,13 @@ async def book_trip(payload: BookingCreate,
             
             
         )
-        background_tasks.add_task(
-            send_push_notification, 
-            "New Booking Alert! 🔔", 
+        notif_result = await send_push_notification(
+            "New Booking Alert! 🔔",
             f"New booking from {passenger_name} for Trip {payload.trip_id}."
         )
-        return {"status": "success", "booking_id": booking_id}
+        logger.info(f"Notification result: {notif_result}")
+        
+        return {"status": "success", "booking_id": booking_id,"notif_debug": notif_result}
 
     except HTTPException as he:
         raise he
