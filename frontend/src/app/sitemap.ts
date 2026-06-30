@@ -1,7 +1,17 @@
 import { MetadataRoute } from 'next';
+// 👇 Adjust the path to your data folder depending on where your sitemap.ts is located
+import { blogPosts } from './data/blogPosts'; 
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://www.northride.pk'; // Change to .com if needed
+  const baseUrl = 'https://www.northride.pk'; 
+
+  // 🎯 DYNAMICALLY GENERATE BLOG URLS
+  const blogUrls = blogPosts.map((post) => ({
+    url: `${baseUrl}/blog/${post.slug}`,
+    lastModified: new Date(post.date), // Tells Google exactly when you published it
+    changeFrequency: 'monthly' as const,
+    priority: 0.7, // Good priority for individual articles
+  }));
 
   return [
     {
@@ -13,7 +23,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: `${baseUrl}/blog`,
       lastModified: new Date(),
-      changeFrequency: 'weekly', // 🚀 Tells Google to check often for new posts
+      changeFrequency: 'weekly', 
       priority: 0.9,
     },
     {
@@ -37,7 +47,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: `${baseUrl}/safety`,
       lastModified: new Date(),
-      changeFrequency: 'monthly', // 🛡️ High priority for building user trust
+      changeFrequency: 'monthly',
       priority: 0.8,
     },
     {
@@ -52,5 +62,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.3,
     },
+    
+    // 👇 Spread all the generated dynamic blog URLs into the sitemap array
+    ...blogUrls,
   ];
 }
