@@ -167,14 +167,45 @@ export default function Home() {
             <p className="hp-routes-sub">We connect the Twin Cities to the highest peaks.</p>
           </div>
           <div className="hp-routes-grid">
-            <RouteCard from="Islamabad / Rawalpindi" to="Gilgit"  time="12–14 hrs" />
-            <RouteCard from="Islamabad / Rawalpindi" to="Skardu"  time="18–20 hrs" />
-            <RouteCard from="Gilgit"                 to="Hunza"   time="Coming soon" />
-            <RouteCard from="Gilgit"                 to="Skardu"  time="Coming soon" />
+            <RouteCard from="Islamabad / Rawalpindi" to="Gilgit" time="12–14 hrs" href="/blog/bus-vs-private-car-to-gilgit" />
+<RouteCard from="Islamabad / Rawalpindi" to="Skardu" time="18–20 hrs" href="/blog/islamabad-to-skardu-travel-guide" />
+<RouteCard from="Gilgit" to="Hunza" time="Coming soon" />
+<RouteCard from="Gilgit" to="Skardu" time="Coming soon" />
           </div>
         </div>
       </section>
-
+{/* ── 4.5 LATEST GUIDES ── */}
+<section className="hp-section hp-section--white" aria-labelledby="guides-heading">
+  <div className="hp-inner">
+    <div className="hp-routes-header">
+      <div>
+        <p className="hp-eyebrow">Plan your trip</p>
+        <h2 id="guides-heading" className="hp-section-h2">Latest travel guides</h2>
+      </div>
+      <a href="/blog" className="hp-routes-sub" style={{ textDecoration: 'underline' }}>
+        View all guides <ArrowRight size={14} style={{ display: 'inline', verticalAlign: 'middle' }} />
+      </a>
+    </div>
+    <div className="hp-features-grid">
+      <GuideCard
+        title="Skardu 7-Day Itinerary & Cost Guide (2026)"
+        desc="A full day-by-day route plan with Prado rental rates, from Shigar Valley to Deosai National Park."
+        href="/blog/skardu-7-day-itinerary-and-cost-guide"
+      />
+      <GuideCard
+        title="Best Hotels in Skardu: Budget to Luxury"
+        desc="From 3,000 PKR guest houses to heritage palace suites — where to stay for every budget."
+        href="/blog/best-hotels-in-skardu-budget-to-luxury"
+      />
+      <GuideCard
+        title="Islamabad to Skardu by Road: The Ultimate Guide"
+        desc="Route options, travel time, and how to book a private car seat for the 640km journey."
+        href="/blog/islamabad-to-skardu-travel-guide"
+      />
+      
+    </div>
+  </div>
+</section>
       {/* ── 5. CTA ── */}
       <section className="hp-cta" aria-labelledby="cta-heading">
         <h2 id="cta-heading" className="hp-cta-h2">Ready to travel?</h2>
@@ -233,5 +264,17 @@ function RouteCard({ from, to, time }) {
       <p className="hp-route-to">{to}</p>
       <p className="hp-route-time">Est. {time}</p>
     </div>
+  );
+  
+}
+function GuideCard({ title, desc, href }) {
+  return (
+    <a href={href} className="hp-feature-card" style={{ display: 'block', textDecoration: 'none' }}>
+      <h3 className="hp-feature-title">{title}</h3>
+      <p className="hp-feature-desc">{desc}</p>
+      <span style={{ color: '#16a34a', fontSize: '13px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
+        Read guide <ArrowRight size={13} />
+      </span>
+    </a>
   );
 }

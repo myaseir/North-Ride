@@ -1,9 +1,25 @@
-"use client";
-
 import Link from 'next/link';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Smartphone, MapPin, Zap, Trophy, ChevronRight, Star, ShieldCheck, CreditCard, User, Car, Navigation } from 'lucide-react';
+
+// Page-specific metadata — previously missing, so this page inherited the
+// homepage's title/description AND its canonical URL.
+export const metadata = {
+  title: "How to Book a Car Ride — Step-by-Step Guide",
+  description: "How to book a private car or shared seat with North Ride between Islamabad, Rawalpindi, Gilgit and Skardu, plus how to sign up and earn as a driver.",
+  alternates: {
+    // CRITICAL FIX: without this, this page's canonical silently inherited
+    // the root layout's absolute URL ("https://northride.pk"), telling
+    // Google this page's canonical was the homepage, not /how-to-use.
+    canonical: "https://northride.pk/how-to-use",
+  },
+  openGraph: {
+    title: "How to Book a Car Ride — North Ride",
+    description: "Step-by-step guide to booking a ride or signing up as a driver with North Ride.",
+    url: "https://northride.pk/how-to-use",
+  },
+};
 
 export default function HowToUse() {
   return (
@@ -15,14 +31,15 @@ export default function HowToUse() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-emerald-50/50 rounded-full blur-3xl -z-10" />
         <div className="max-w-4xl mx-auto text-center">
           <div className="anim-up inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-50 rounded-full border border-emerald-100 mb-8">
-            <Smartphone size={14} className="text-emerald-600" />
+            <Smartphone size={14} className="text-emerald-600" aria-hidden="true" />
             <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-widest">User Guide</span>
           </div>
+          {/* H1 now names the actual action + keyword instead of pure brand copy */}
           <h1 className="anim-up anim-d1 text-4xl md:text-6xl font-bold text-slate-900 tracking-tight mb-6">
-            Master the <span className="text-emerald-500 italic font-serif font-light">App.</span>
+            How to Book Your <span className="text-emerald-500 italic font-serif font-light">Ride.</span>
           </h1>
           <p className="anim-up anim-d2 max-w-xl mx-auto text-slate-500 text-base md:text-lg font-medium leading-relaxed">
-            Everything you need to know about using North Ride. Find out how to book a safe trip or how to earn money by driving.
+            Everything you need to know about booking a car with North Ride — or earning money as a driver on the Gilgit-Baltistan routes.
           </p>
         </div>
       </section>
@@ -31,7 +48,7 @@ export default function HowToUse() {
       <section className="py-16 px-4 md:px-6">
         <div className="max-w-4xl mx-auto mb-10 flex items-center gap-4">
           <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center">
-            <User className="text-slate-700" size={24} />
+            <User className="text-slate-700" size={24} aria-hidden="true" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-slate-900 tracking-tight">For Passengers</h2>
@@ -39,9 +56,20 @@ export default function HowToUse() {
           </div>
         </div>
         <div className="max-w-4xl mx-auto space-y-4">
-          <StepCard number="01" icon={<MapPin size={24} className="text-emerald-600" />} title="Choose Your Destination" desc="Open the app and enter where you want to go. You can book a ride for right now, or schedule one for later." tag="Search" delay="anim-d1" />
-          <StepCard number="02" icon={<Navigation size={24} className="text-emerald-600" />} title="Pick a Driver" desc="See a list of available cars. You can check the driver's ratings, car type, and the fixed price before you say yes." tag="Select" delay="anim-d2" />
-          <StepCard number="03" icon={<ShieldCheck size={24} className="text-emerald-600" />} title="Travel Safely" desc="Sit back and enjoy the views. Your ride is tracked on GPS, and our support team is always awake to help you." tag="Enjoy" delay="anim-d3" />
+          <StepCard number="01" icon={<MapPin size={24} className="text-emerald-600" aria-hidden="true" />} title="Choose Your Destination" desc="Open the app and enter where you want to go. You can book a ride for right now, or schedule one for later." tag="Search" delay="anim-d1" />
+          <StepCard number="02" icon={<Navigation size={24} className="text-emerald-600" aria-hidden="true" />} title="Pick a Driver" desc="See a list of available cars. You can check the driver's ratings, car type, and the fixed price before you say yes." tag="Select" delay="anim-d2" />
+          <StepCard number="03" icon={<ShieldCheck size={24} className="text-emerald-600" aria-hidden="true" />} title="Travel Safely" desc="Sit back and enjoy the views. Your ride is tracked on GPS, and our support team is always awake to help you." tag="Enjoy" delay="anim-d3" />
+        </div>
+
+        {/* Internal link into the route content cluster — connects this
+            how-to page to the guides that actually convert. */}
+        <div className="max-w-4xl mx-auto mt-8">
+          <Link
+            href="/blog/islamabad-to-skardu-travel-guide"
+            className="inline-flex items-center gap-2 text-[13px] font-semibold text-emerald-600 hover:text-emerald-700"
+          >
+            See the full Islamabad to Skardu route guide <ChevronRight size={14} aria-hidden="true" />
+          </Link>
         </div>
       </section>
 
@@ -51,7 +79,7 @@ export default function HowToUse() {
       <section className="py-16 px-4 md:px-6">
         <div className="max-w-4xl mx-auto mb-10 flex items-center gap-4">
           <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center">
-            <Car className="text-emerald-600" size={24} />
+            <Car className="text-emerald-600" size={24} aria-hidden="true" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-slate-900 tracking-tight">For Drivers</h2>
@@ -59,40 +87,40 @@ export default function HowToUse() {
           </div>
         </div>
         <div className="max-w-4xl mx-auto space-y-4">
-          <StepCard number="01" icon={<Zap size={24} className="text-emerald-600" />} title="Set Up Your Profile" desc="Download the app and upload your ID and car papers. We check your details fast so you can start driving." tag="Start Here" delay="anim-d1" />
-          <StepCard number="02" icon={<Star size={24} className="text-emerald-600" />} title="Get 5 Stars" desc="Good service gets you high ratings. High ratings unlock special rides (like tourists) and faster payments." tag="Grow" delay="anim-d2" />
-          <StepCard number="03" icon={<CreditCard size={24} className="text-emerald-600" />} title="Easy Payments" desc="See your money in the app. Send your earnings directly to your bank account whenever you want." tag="Get Paid" delay="anim-d3" />
+          <StepCard number="01" icon={<Zap size={24} className="text-emerald-600" aria-hidden="true" />} title="Set Up Your Profile" desc="Download the app and upload your ID and car papers. We check your details fast so you can start driving." tag="Start Here" delay="anim-d1" />
+          <StepCard number="02" icon={<Star size={24} className="text-emerald-600" aria-hidden="true" />} title="Get 5 Stars" desc="Good service gets you high ratings. High ratings unlock special rides (like tourists) and faster payments." tag="Grow" delay="anim-d2" />
+          <StepCard number="03" icon={<CreditCard size={24} className="text-emerald-600" aria-hidden="true" />} title="Easy Payments" desc="See your money in the app. Send your earnings directly to your bank account whenever you want." tag="Get Paid" delay="anim-d3" />
         </div>
       </section>
 
-      {/* --- DRIVER RANKS --- */}
+      {/* --- WHY DRIVE WITH US --- */}
       <section className="py-12 px-4 md:px-8">
         <div className="anim-up max-w-6xl mx-auto bg-slate-50 text-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-sm">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 p-8 md:p-16 items-center">
             <div>
-              <div className="inline-block px-3 py-1 bg-white border border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-widest rounded-lg mb-4">Driver Ranks</div>
+              <div className="inline-block px-3 py-1 bg-white border border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-widest rounded-lg mb-4">For Drivers</div>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6 tracking-tight">
-                Earn More as You <br className="hidden md:block" />
-                <span className="text-emerald-500 italic font-serif font-light">Drive.</span>
+                Drive on Your <br className="hidden md:block" />
+                <span className="text-emerald-500 italic font-serif font-light">Own Terms.</span>
               </h2>
               <p className="text-slate-500 text-sm md:text-base mb-10 font-medium leading-relaxed">
-                The more trips you complete, the higher your rank. Higher ranks mean you keep more of the money you earn.
+                North Ride is built to be fair and simple for every driver on the platform, from your first trip onward.
               </p>
               <div className="space-y-3">
-                <TierRow rank="Beginner" bonus="Standard Share" active />
-                <TierRow rank="Experienced" bonus="+5% Extra Earnings" />
-                <TierRow rank="Pro" bonus="+12% Extra Earnings" />
-                <TierRow rank="Legend" bonus="+20% & Best Rides" />
+                <BenefitRow icon={<Zap size={16} aria-hidden="true" />} text="Flexible schedule — drive whenever suits you" />
+                <BenefitRow icon={<CreditCard size={16} aria-hidden="true" />} text="Transparent, fixed pricing shown before every trip" />
+                <BenefitRow icon={<Star size={16} aria-hidden="true" />} text="Rider ratings that help you build trust over time" />
+                <BenefitRow icon={<ShieldCheck size={16} aria-hidden="true" />} text="Support team available for every trip" />
               </div>
             </div>
             <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-sm">
-              <Trophy size={40} className="text-emerald-500 mb-6" />
-              <h3 className="text-xl font-bold text-slate-900 mb-4 uppercase tracking-wider">Legendary Status</h3>
+              <Trophy size={40} className="text-emerald-500 mb-6" aria-hidden="true" />
+              <h3 className="text-xl font-bold text-slate-900 mb-4 uppercase tracking-wider">Built for Local Drivers</h3>
               <p className="text-slate-500 mb-8 leading-relaxed text-sm font-medium">
-                Legend drivers are our best partners. They get the first choice for long trips, airport rides, and tourists.
+                We're building North Ride around the people who actually know these mountain roads — no middlemen, no hidden cuts, just fair trips.
               </p>
               <Link href="/login" className="flex items-center justify-between w-full p-4 bg-emerald-600 text-white rounded-2xl font-semibold uppercase text-xs tracking-wider hover:bg-emerald-700 transition-all active:scale-95">
-                Become a Driver <ChevronRight size={18} />
+                Become a Driver <ChevronRight size={18} aria-hidden="true" />
               </Link>
             </div>
           </div>
@@ -107,12 +135,12 @@ export default function HowToUse() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="anim-up anim-d1 p-8 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-            <ShieldCheck className="text-emerald-600 mb-5" size={32} />
+            <ShieldCheck className="text-emerald-600 mb-5" size={32} aria-hidden="true" />
             <h4 className="font-bold text-slate-900 mb-3 uppercase text-sm tracking-wider">For Drivers</h4>
             <p className="text-slate-500 text-sm font-medium leading-relaxed">Safety is our top priority. Always follow speed limits, keep your car clean, and be polite. Do not cancel trips without a good reason.</p>
           </div>
           <div className="anim-up anim-d2 p-8 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-            <Star className="text-emerald-600 mb-5" size={32} />
+            <Star className="text-emerald-600 mb-5" size={32} aria-hidden="true" />
             <h4 className="font-bold text-slate-900 mb-3 uppercase text-sm tracking-wider">For Passengers</h4>
             <p className="text-slate-500 text-sm font-medium leading-relaxed">Treat your driver and their car with respect. Be ready on time for your pickup, and enjoy the beautiful journey.</p>
           </div>
@@ -140,11 +168,13 @@ function StepCard({ number, icon, title, desc, tag, delay }) {
   );
 }
 
-function TierRow({ rank, bonus, active }) {
+function BenefitRow({ icon, text }) {
   return (
-    <div className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${active ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'}`}>
-      <span className="font-bold uppercase tracking-wider text-[12px]">{rank}</span>
-      <span className="font-semibold text-[12px]">{bonus}</span>
+    <div className="flex items-center gap-3 p-4 rounded-2xl border bg-white border-slate-100 text-slate-700">
+      <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 shrink-0">
+        {icon}
+      </span>
+      <span className="font-semibold text-[13px]">{text}</span>
     </div>
   );
 }
