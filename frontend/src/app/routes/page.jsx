@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { ArrowRight, MapPin } from 'lucide-react';
-import { routes } from '../data/routes';
+import { routes } from '../data/route';
 
 const SITE_URL = 'https://northride.pk';
 
