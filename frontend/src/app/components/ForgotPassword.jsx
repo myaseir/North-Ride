@@ -49,17 +49,21 @@ export default function ForgetPassword({ onBack }) {
   };
 
   // Step 2: ACTUALLY verify the code with the Backend
-  const handleVerify = async (e) => {
+const handleVerify = async (e) => {
     e.preventDefault();
     if (otp.length !== 6) return setError("Please enter a 6-digit code.");
     
     setLoading(true);
     setError("");
     try {
-      // 🎯 FIXED: Sending email and code as Query Parameters to match FastAPI 422 fix
-      const res = await fetch(`${apiUrl}/api/auth/password/verify-code?email=${email.trim().toLowerCase()}&code=${otp}`, {
+      // 🎯 FIXED: Send data in the body as JSON to match FastAPI model
+      const res = await fetch(`${apiUrl}/api/auth/password/verify-code`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: email.trim().toLowerCase(), 
+          code: otp 
+        }),
       });
 
       const data = await res.json();
