@@ -39,7 +39,7 @@ export default function Footer() {
            <div className="flex gap-3">
   {/* Instagram */}
   <a 
-    href="https://www.instagram.com/_northride.pk?igsh=cXE1aGpvNXl4eXJ6" 
+    href="https://www.instagram.com/_northride.pk" 
     className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all border border-slate-200 shadow-sm"
   >
     <Instagram size={18} />
@@ -73,7 +73,7 @@ export default function Footer() {
               links={[
                 { label: 'Book a Ride', href: '/dashboard/passenger' },
                 { label: 'Driver Login', href: '/dashboard/driver' },
-                { label: 'How to Use', href: '/how-to-play' },
+                { label: 'How to Use', href: '/how-to-use' },
               ]} 
             />
             <FooterLinkGroup 

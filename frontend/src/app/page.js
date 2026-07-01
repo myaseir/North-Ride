@@ -76,9 +76,9 @@ export default function Home() {
             </div>
 
             <h1 className="hp-h1">
-              Three Ranges.<br />
-              <span className="hp-h1-em">One Road.</span>
-            </h1>
+  Islamabad to Gilgit & Skardu.<br />
+  <span className="hp-h1-em">Booked in Minutes.</span>
+</h1>
 
             <p className="hp-hero-desc">
               Book a safe, comfortable seat across the mountains.
