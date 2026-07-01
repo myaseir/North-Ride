@@ -246,6 +246,15 @@ class UserRepository:
         )
         return await cursor.to_list(length=50)
     
+    async def get_by_referral_code(self, referral_code: str):
+        """Finds the user who owns this referral code."""
+        # We search 'personal_referral_code' because that is the field 
+        # used in your auth.py registration logic
+        return await self.collection.find_one({
+            "personal_referral_code": {"$regex": f"^{referral_code}$", "$options": "i"}
+        })
+    
+    
     async def increment_completed_trips(self, user_id: str):
         # Change return_document=True to ReturnDocument.AFTER
         result = await self.collection.find_one_and_update(
