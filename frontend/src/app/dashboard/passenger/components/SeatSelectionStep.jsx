@@ -297,10 +297,12 @@ const seatStatuses = useMemo(() => {
           </div>
         </div>
         <button 
-          onClick={() => {
-            const message = `Traveling to Gilgit Baltistan? Book a safe and affordable ride with North Ride.\n\nUse my referral code ${stats.code}at northride.pk\n\nJoin now!`;
-            window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-          }} 
+         onClick={() => {
+  // 🎯 Add asterisks around ${stats.code} for WhatsApp Bold formatting
+  const message = `Traveling to Gilgit Baltistan? Book a safe and affordable ride with North Ride.\n\nUse my referral code *${stats.code}* at northride.pk\n\nJoin now!`;
+  
+  window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+}}
           className="text-[10px] font-black uppercase text-emerald-600 bg-white px-3 py-1.5 rounded-lg border border-emerald-100 shadow-sm hover:bg-emerald-50 transition-all"
         >
           Invite Now
