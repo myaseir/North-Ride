@@ -17,10 +17,10 @@ async def send_otp_email(email_to: str, otp_code: str):
             "email": settings.SENDER_EMAIL.strip()
         },
         "to": [{"email": email_to}],
-        "subject": "Glacia Go - Your Verification Code",
+        "subject": "North Ride - Your Verification Code",
         "htmlContent": f"""
         <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee;">
-            <h2 style="color: #10b981;">Glacia Go</h2>
+            <h2 style="color: #10b981;">North Ride</h2>
             <p>Your verification code is:</p>
             <h1 style="letter-spacing: 5px; color: #111;">{otp_code}</h1>
             <p style="font-size: 12px; color: #888;">This code expires in 10 minutes.</p>

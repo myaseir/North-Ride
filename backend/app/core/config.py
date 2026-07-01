@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     # 6. Email (Brevo)
     BREVO_API_KEY: str
     SENDER_EMAIL: str
-    SENDER_NAME: str = "Glacia Go"
+    SENDER_NAME: str = "North Ride Pakistan"
     MAIL_SERVER: str = "smtp-relay.sendinblue.com"
     MAIL_PORT: int = 587
 
