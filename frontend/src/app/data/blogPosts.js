@@ -248,10 +248,12 @@ To help you plan your budget, here are the best, highly-rated hotels in Skardu c
 
 1. THE BUDGET TRAVELER (3,000 - 5,000 PKR per night)
 You don't need to spend a fortune to get a clean bed and a hot shower. These options are simple, highly rated for cleanliness, and perfect for travelers who plan to spend all day exploring outdoors.
-- Rus Olive Lodge Skardu (Our Top Pick!): a hidden gem near the University of Baltistan, with a serene landscaped garden, spotless rooms, and exceptional hospitality.
-- Ringachan Guest House: known for welcoming staff and great value for money.
-- Montagna PODS: a unique, budget-friendly "glamping" style pod experience.
-- Highlander Inn: simple, clean, and conveniently located near the main Skardu market.
+
+-Rus Olive Lodge Skardu (Our Top Pick!)**: a peaceful retreat in Sundus, surrounded by Russian olive trees, just a 10–15 minute walk from Katpana Cold Desert and Katpana Lake. Featuring a serene landscaped garden, spotless rooms, and exceptional hospitality.
+-Ringachan Guest House: known for welcoming staff and great value for money.
+-Montagna PODS: a unique, budget-friendly "glamping" style pod experience.
+-Highlander Inn: simple, clean, and conveniently located near the main Skardu market.
+
 
 2. THE COMFORT MID-RANGE (7,000 - 10,000 PKR per night)
 If you want standard hotel amenities, reliable Wi-Fi, central heating, and a good breakfast without breaking the bank, this is the sweet spot.
