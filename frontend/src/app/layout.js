@@ -18,28 +18,27 @@ const dmSerif = DM_Serif_Display({
   variable: '--font-dm-serif',
 });
 
+const SITE_URL = "https://northride.pk";
+
 // SEO metadata — brand terms first, route terms belong on their own landing pages, not here
 export const metadata = {
-  metadataBase: new URL('https://northride.pk'),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "North Ride | Rent a Car: Islamabad, Rawalpindi to Gilgit & Skardu",
     template: "%s | North Ride"
   },
   description: "North Ride — book a private car, shared seat, or rental for Islamabad, Rawalpindi, Gilgit & Skardu routes. Instant online booking, fixed fares, verified drivers.",
   applicationName: "North Ride",
-
-
-
   authors: [{ name: "North Ride Team" }],
   creator: "North Ride",
   publisher: "North Ride",
   alternates: {
-    canonical: "https://northride.pk",
+    canonical: SITE_URL,
   },
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://northride.pk",
+    url: SITE_URL,
     siteName: "North Ride",
     title: "North Ride | Islamabad to Gilgit & Skardu Car Booking",
     description: "Book a private car or shared seat online — Islamabad, Rawalpindi, Gilgit, Skardu routes.",
@@ -78,27 +77,55 @@ export default function RootLayout({ children }) {
   // Organization schema — strengthens Google's confidence that "North Ride" is a real,
   // identifiable business entity. This is what actually helps brand-name ranking.
   const orgSchema = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  "name": "North Ride",
-  "alternateName": ["NorthRide", "North Ride Pakistan"],
-  "url": "https://northride.pk",
-  "logo": "https://northride.pk/icon.png",
-  "telephone": "+923715982735",
-  "sameAs": [
-    "https://www.facebook.com/share/1PYPKH7d7x",
-    "https://www.instagram.com/_northride.pk",
-    "https://wa.me/923715982735"
-  ]
-};
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "North Ride",
+    "alternateName": ["NorthRide", "North Ride Pakistan"],
+    "url": SITE_URL,
+    "logo": `${SITE_URL}/icon.png`,
+    "telephone": "+923715982735",
+    "sameAs": [
+      "https://www.facebook.com/share/1PYPKH7d7x",
+      "https://www.instagram.com/_northride.pk",
+      "https://wa.me/923715982735"
+    ]
+  };
 
-  // TaxiService schema with explicit routes as offered services
+  // WebSite schema — separate from Organization. This tells Google the site
+  // itself (as opposed to the business entity) is a distinct, citable thing,
+  // which is part of what feeds sitelinks/entity understanding. No SearchAction
+  // included since there's no on-site search endpoint yet — don't fake one.
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "North Ride",
+    "url": SITE_URL,
+  };
+
+  // Real, bookable route pages that exist right now at /routes/[slug].
+  // Each direction (e.g. "Islamabad to Skardu" and "Skardu to Islamabad")
+  // points to the same route page, since one page covers both directions
+  // of that corridor — no reason to invent separate URLs that don't exist.
+  const routeOfferings = [
+    { name: "Islamabad to Skardu", slug: "islamabad-skardu" },
+    { name: "Skardu to Islamabad", slug: "islamabad-skardu" },
+    { name: "Rawalpindi to Skardu", slug: "rawalpindi-skardu" },
+    { name: "Skardu to Rawalpindi", slug: "rawalpindi-skardu" },
+    { name: "Islamabad to Gilgit", slug: "islamabad-gilgit" },
+    { name: "Gilgit to Islamabad", slug: "islamabad-gilgit" },
+    { name: "Rawalpindi to Gilgit", slug: "rawalpindi-gilgit" },
+    { name: "Gilgit to Rawalpindi", slug: "rawalpindi-gilgit" },
+  ];
+
+  // TaxiService schema with explicit routes as offered services.
+  // priceRange stays as a generic "$$" indicator — a range, not an exact
+  // figure, so it doesn't go stale the way a hardcoded fare would.
   const serviceSchema = {
     "@context": "https://schema.org",
     "@type": "TaxiService",
     "name": "North Ride",
     "description": "Private car rental and shared seat booking between Islamabad, Rawalpindi, Gilgit and Skardu.",
-    "url": "https://northride.pk",
+    "url": SITE_URL,
     "telephone": "+923715982735",
     "priceRange": "$$",
     "areaServed": [
@@ -110,7 +137,7 @@ export default function RootLayout({ children }) {
     "provider": {
       "@type": "LocalBusiness",
       "name": "North Ride",
-      "image": "https://northride.pk/icon.png",
+      "image": `${SITE_URL}/icon.png`,
       "address": {
         "@type": "PostalAddress",
         "addressLocality": "Gilgit",
@@ -121,14 +148,10 @@ export default function RootLayout({ children }) {
     "hasOfferCatalog": {
       "@type": "OfferCatalog",
       "name": "Routes",
-      "itemListElement": [
-        "Islamabad to Skardu", "Rawalpindi to Skardu",
-        "Islamabad to Gilgit", "Rawalpindi to Gilgit",
-        "Skardu to Islamabad", "Skardu to Rawalpindi",
-        "Gilgit to Islamabad", "Gilgit to Rawalpindi"
-      ].map(route => ({
+      "itemListElement": routeOfferings.map(({ name, slug }) => ({
         "@type": "Offer",
-        "itemOffered": { "@type": "Service", "name": `${route} Car Booking` }
+        "url": `${SITE_URL}/routes/${slug}`,
+        "itemOffered": { "@type": "Service", "name": `${name} Car Booking` }
       }))
     }
   };
@@ -151,6 +174,10 @@ export default function RootLayout({ children }) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
         />
         <script
           type="application/ld+json"

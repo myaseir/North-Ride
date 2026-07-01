@@ -4,19 +4,66 @@ import Footer from '../components/Footer';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import { blogPosts } from '../data/blogPosts';
 
+const SITE_URL = 'https://northride.pk';
+
 export const metadata = {
   title: 'Blog | North Ride - Travel Journal',
   description: 'Read our latest travel guides for Gilgit, Skardu, Hunza, and the Twin Cities.',
+  alternates: {
+    canonical: `${SITE_URL}/blog`,
+  },
+  openGraph: {
+    type: 'website',
+    title: 'North Ride Travel Journal',
+    description: 'Read our latest travel guides for Gilgit, Skardu, Hunza, and the Twin Cities.',
+    url: `${SITE_URL}/blog`,
+  },
 };
 
 export default function BlogPage() {
+  // 🎯 Blog schema — tells Google this page is a listing of BlogPosting items,
+  // reinforcing it as a distinct content hub (helps eligibility for sitelinks
+  // and general topical authority signals).
+  const blogSchema = {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "name": "North Ride Travel Journal",
+    "url": `${SITE_URL}/blog`,
+    "blogPost": blogPosts.map((post) => ({
+      "@type": "BlogPosting",
+      "headline": post.title,
+      "url": `${SITE_URL}/blog/${post.slug}`,
+      "datePublished": post.date,
+      "dateModified": post.dateModified || post.date,
+    })),
+  };
+
+  // 🎯 BreadcrumbList — Home > Blog
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL },
+      { "@type": "ListItem", "position": 2, "name": "Blog", "item": `${SITE_URL}/blog` },
+    ],
+  };
+
   return (
     <main className="min-h-[100svh] bg-white text-slate-900 selection:bg-emerald-100 overflow-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+
       <Navbar />
-      
+
       <section className="pt-32 md:pt-40 pb-12 px-6 relative">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-emerald-50/50 rounded-full blur-3xl -z-10" />
-        
+
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-16 text-center md:text-left mx-auto md:mx-0">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-6 text-[11px] font-bold tracking-widest text-emerald-700 uppercase bg-emerald-50 border border-emerald-100/50 rounded-full">
@@ -58,7 +105,7 @@ export default function BlogPage() {
           </div>
         </div>
       </section>
-      
+
       <Footer />
     </main>
   );

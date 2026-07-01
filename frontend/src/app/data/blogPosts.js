@@ -42,7 +42,8 @@ Skip the terminal bargaining — you can reserve a seat online in advance with f
         question: "Is it safe to travel the Skardu road at night?",
         answer: "While the roads are well-maintained, we strongly recommend traveling during daylight hours. Daylight travel is much safer on mountain curves and allows you to enjoy the stunning valley views."
       }
-    ]
+    ],
+    relatedRoutes: ["islamabad-skardu"]
   },
   {
     id: 2,
@@ -83,7 +84,8 @@ North Ride bridges the gap between the two: city-to-city rides in comfortable ca
         question: "Do private cars have space for luggage?",
         answer: "Yes, standard traveler luggage is accounted for. However, if you are carrying excessive gear (like heavy trekking equipment), it is best to book a dedicated vehicle."
       }
-    ]
+    ],
+    relatedRoutes: ["islamabad-gilgit"]
   },
   {
     id: 3,
@@ -127,7 +129,8 @@ No matter what season you choose, the journey up the Karakoram Highway requires 
         question: "What is the peak tourist season in Gilgit-Baltistan?",
         answer: "July and August are the busiest months. If you are traveling during this time, it is highly recommended to book your transport and hotels weeks in advance."
       }
-    ]
+    ],
+    relatedRoutes: ["islamabad-skardu", "islamabad-gilgit"]
   },
   {
     id: 4,
@@ -224,7 +227,8 @@ Skip the hassle of local terminal bargaining and unexpected driver cancellations
         question: "What is the minimum budget needed for a 7-day Skardu tour?",
         answer: "If traveling in a group of 4 to share vehicle rental costs, a minimum budget of 65,000 to 75,000 PKR per person is completely sufficient to cover standard accommodation, food, and premium 4x4 transport."
       }
-    ]
+    ],
+    relatedRoutes: ["islamabad-skardu", "rawalpindi-skardu"]
   },
   {
     id: 5,
@@ -296,7 +300,8 @@ PRO TIP: Booking your hotel is only half the journey. Once you arrive in Skardu,
         question: "Are luxury heritage hotels like Serena Shigar Fort worth the price?",
         answer: "Yes. Heritage hotels like Serena Shigar Fort and Khaplu Palace are meticulously restored historical landmarks. You are paying for a museum-like experience, exceptional service, and preserving local history, making them perfect for special occasions."
       }
-    ]
+    ],
+    relatedRoutes: ["islamabad-skardu", "rawalpindi-skardu"]
   },
   {
     id: 6,
@@ -349,6 +354,7 @@ Whether you're heading up for a short trip to Hunza and Skardu or coming back do
         question: "Is pricing fixed or negotiated at pickup?",
         answer: "Pricing is fixed and shown at the time of booking online, so there's no negotiation or surprise charges at the terminal."
       }
-    ]
+    ],
+    relatedRoutes: ["islamabad-skardu", "islamabad-gilgit", "rawalpindi-skardu", "rawalpindi-gilgit"]
   }
 ];

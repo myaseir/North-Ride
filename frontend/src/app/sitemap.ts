@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { blogPosts } from './data/blogPosts';
+import { routes } from './data/route';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://northride.pk'; // matches metadataBase / robots.ts — no www
@@ -8,7 +9,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: `${baseUrl}/blog/${post.slug}`,
     lastModified: new Date(post.dateModified), // you already track this per post — use it
     changeFrequency: 'monthly' as const,
-    priority: 0.8, // these are your real route/commercial-intent pages now
+    priority: 0.7, // informational content — below routes, above legal/utility
+  }));
+
+  // Route pages are your highest commercial-intent URLs — real bookable
+  // corridors, not just content. Priority reflects that.
+  const routeUrls = routes.map((route) => ({
+    url: `${baseUrl}/routes/${route.slug}`,
+    lastModified: new Date('2026-07-01'), // update when route content/copy actually changes
+    changeFrequency: 'monthly' as const,
+    priority: 0.9,
   }));
 
   return [
@@ -18,6 +28,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly',
       priority: 1.0,
     },
+    {
+      url: `${baseUrl}/routes`,
+      lastModified: new Date('2026-07-01'),
+      changeFrequency: 'monthly',
+      priority: 0.9,
+    },
+    ...routeUrls,
     {
       url: `${baseUrl}/blog`,
       lastModified: new Date(),
