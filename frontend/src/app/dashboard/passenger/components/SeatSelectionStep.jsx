@@ -6,7 +6,9 @@ import { toast } from 'react-hot-toast';
 export default function SeatSelectionStep({ trip,user, initialData, onNext }) {
   // 🎯 DEBUGGER: See exactly what the frontend is receiving
 const referralCount = user?.loyalty_meta?.referral_count || 0;
-  
+  const stats = {
+    code: user?.referral_code || user?.personal_referral_code || "N/A"
+  };
 
   // 🎯 CORRECTED Line 6
 const basePricePerSeat = trip.base_price || trip.fare || trip.price || 0;
@@ -295,7 +297,10 @@ const seatStatuses = useMemo(() => {
           </div>
         </div>
         <button 
-          onClick={() => toast("Redirecting to profile...", {icon: '🎁'})}
+          onClick={() => {
+            const message = `Traveling to Gilgit Baltistan? Book a safe and affordable ride with North Ride.\n\nUse my referral code ${stats.code}at northride.pk\n\nJoin now!`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+          }} 
           className="text-[10px] font-black uppercase text-emerald-600 bg-white px-3 py-1.5 rounded-lg border border-emerald-100 shadow-sm hover:bg-emerald-50 transition-all"
         >
           Invite Now

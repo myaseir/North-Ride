@@ -100,8 +100,12 @@ const progress = dbReferralCount % 4;
        <button onClick={copyCode} className="flex items-center justify-center gap-2 flex-1 bg-slate-100 py-3 rounded-2xl font-bold text-slate-900 text-sm hover:bg-slate-200 transition-colors">
   <Copy size={14} /> {stats.code}
 </button>
-        <button onClick={() => window.open(`https://wa.me/?text=Use my code ${stats.code} on North Ride!`, '_blank')} 
-                className="bg-emerald-600 text-white px-6 rounded-2xl hover:bg-emerald-700 transition-colors">
+      <button 
+          onClick={() => {
+            const message = `Traveling to Gilgit Baltistan? Book a safe and affordable ride with North Ride.\n\nUse my referral code ${stats.code}at northride.pk\n\nJoin now!`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+          }} 
+          className="bg-emerald-600 text-white px-6 rounded-2xl hover:bg-emerald-700 transition-colors">
           <Share2 size={20} />
         </button>
       </div>
