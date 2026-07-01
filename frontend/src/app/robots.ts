@@ -12,13 +12,12 @@ export default function robots(): MetadataRoute.Robots {
         allow: '/',
         disallow: [
           '/api/',      // Hide backend routes
-          '/_next/',    // Hide Next.js internal files
           '/admin/',    // Hide your admin dashboard
           '/login',     // Hide the login page
         ],
       },
     ],
-    // Make sure this matches your actual live domain
-    sitemap: 'https://www.northride.pk/sitemap.xml', 
+    // Must match your canonical domain exactly (no www — matches metadataBase)
+    sitemap: 'https://northride.pk/sitemap.xml',
   };
 }

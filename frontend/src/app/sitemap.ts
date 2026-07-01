@@ -1,69 +1,65 @@
 import { MetadataRoute } from 'next';
-// 👇 Adjust the path to your data folder depending on where your sitemap.ts is located
-import { blogPosts } from './data/blogPosts'; 
+import { blogPosts } from './data/blogPosts';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://www.northride.pk'; 
+  const baseUrl = 'https://northride.pk'; // matches metadataBase / robots.ts — no www
 
-  // 🎯 DYNAMICALLY GENERATE BLOG URLS
   const blogUrls = blogPosts.map((post) => ({
     url: `${baseUrl}/blog/${post.slug}`,
-    lastModified: new Date(post.date), // Tells Google exactly when you published it
+    lastModified: new Date(post.dateModified), // you already track this per post — use it
     changeFrequency: 'monthly' as const,
-    priority: 0.7, // Good priority for individual articles
+    priority: 0.8, // these are your real route/commercial-intent pages now
   }));
 
   return [
     {
       url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
+      lastModified: new Date('2026-06-01'),
+      changeFrequency: 'weekly',
       priority: 1.0,
     },
     {
       url: `${baseUrl}/blog`,
       lastModified: new Date(),
-      changeFrequency: 'weekly', 
-      priority: 0.9,
+      changeFrequency: 'weekly',
+      priority: 0.8,
     },
+    ...blogUrls,
     {
       url: `${baseUrl}/about`,
-      lastModified: new Date(),
+      lastModified: new Date('2026-06-01'),
       changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/contact`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
+      priority: 0.6,
     },
     {
       url: `${baseUrl}/how-to-use`,
-      lastModified: new Date(),
+      lastModified: new Date('2026-06-01'),
       changeFrequency: 'monthly',
-      priority: 0.8,
+      priority: 0.6,
     },
     {
       url: `${baseUrl}/safety`,
-      lastModified: new Date(),
+      lastModified: new Date('2026-06-01'),
       changeFrequency: 'monthly',
-      priority: 0.8,
+      priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/contact`,
+      lastModified: new Date('2026-06-01'),
+      changeFrequency: 'yearly',
+      priority: 0.4,
     },
     {
       url: `${baseUrl}/terms`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.3,
+      lastModified: new Date('2026-06-01'),
+      changeFrequency: 'yearly',
+      priority: 0.2,
     },
     {
       url: `${baseUrl}/privacy`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.3,
+      lastModified: new Date('2026-06-01'),
+      changeFrequency: 'yearly',
+      priority: 0.2,
     },
-    
-    // 👇 Spread all the generated dynamic blog URLs into the sitemap array
-    ...blogUrls,
   ];
 }
