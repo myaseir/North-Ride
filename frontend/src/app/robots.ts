@@ -4,20 +4,19 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
-        userAgent: 'Googlebot-Image', // Explicitly allow image crawling
-        allow: '/',
-      },
-      {
         userAgent: '*',
         allow: '/',
         disallow: [
-          '/api/',      // Hide backend routes
-          '/admin/',    // Hide your admin dashboard
-          '/login',     // Hide the login page
+          '/api/',
+          '/admin/',
+          '/login',
+          '/register', // Added: Prevents indexing of registration/auth flow pages
+          '/_next/',   // Added: Prevents indexing of Next.js internal build files
         ],
       },
     ],
-    // Must match your canonical domain exactly (no www — matches metadataBase)
+    // Ensure this exactly matches the sitemap URL your generator produces
     sitemap: 'https://northride.pk/sitemap.xml',
+    host: 'https://northride.pk', // Explicitly define the host
   };
 }

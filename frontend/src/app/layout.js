@@ -27,14 +27,9 @@ export const metadata = {
   },
   description: "North Ride — book a private car, shared seat, or rental for Islamabad, Rawalpindi, Gilgit & Skardu routes. Instant online booking, fixed fares, verified drivers.",
   applicationName: "North Ride",
-  icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/apple-icon.png",
-  },
 
-  // NOTE: the meta "keywords" tag is ignored by Google's ranking algorithm since ~2009.
-  // Removed it — it does nothing for rankings and just clutters the head.
+
+
   authors: [{ name: "North Ride Team" }],
   creator: "North Ride",
   publisher: "North Ride",
