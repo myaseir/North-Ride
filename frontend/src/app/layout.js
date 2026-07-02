@@ -24,10 +24,10 @@ const SITE_URL = "https://northride.pk";
 export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "North Ride | Rent a Car: Islamabad, Rawalpindi to Gilgit & Skardu",
+    default: "North Ride | Book a Car to Skardu & Gilgit",
     template: "%s | North Ride"
   },
-  description: "North Ride — book a private car, shared seat, or rental for Islamabad, Rawalpindi, Gilgit & Skardu routes. Instant online booking, fixed fares, verified drivers.",
+  description: "Travel from Islamabad or Rawalpindi to Gilgit or Skardu with North Ride. Book a private car or shared seat online, get a fixed fare, and ride with a verified driver — no bargaining, no hidden costs.",
   applicationName: "North Ride",
   authors: [{ name: "North Ride Team" }],
   creator: "North Ride",
@@ -40,14 +40,14 @@ export const metadata = {
     locale: "en_US",
     url: SITE_URL,
     siteName: "North Ride",
-    title: "North Ride | Islamabad to Gilgit & Skardu Car Booking",
-    description: "Book a private car or shared seat online — Islamabad, Rawalpindi, Gilgit, Skardu routes.",
+    title: "North Ride | Your Ride to Northern Pakistan, Booked Online",
+    description: "Private cars and shared seats from Islamabad & Rawalpindi to Gilgit & Skardu. Fixed fares, verified drivers, instant booking.",
     images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "North Ride - Your Gateway to the North" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "North Ride | Islamabad to Gilgit & Skardu",
-    description: "Book a private car or shared seat online — Islamabad, Rawalpindi, Gilgit, Skardu routes.",
+    title: "North Ride | Your Ride to Northern Pakistan",
+    description: "Book a private car or shared seat online — Islamabad, Rawalpindi, Gilgit & Skardu.",
     images: ["/og-image.jpg"],
   },
   robots: {
@@ -60,13 +60,17 @@ export const metadata = {
     },
   },
 
+  // NOTE: no manual `icons` block here on purpose. favicon.ico, icon0.svg,
+  // icon1.png, and apple-icon.png all live in /app using Next.js's exact
+  // recognized filenames, so Next auto-generates the <link> tags for all of
+  // them. Adding a manual icons object here would conflict with that.
+
   // Add this once you've verified the property in Google Search Console —
   // it's how you'll actually monitor indexing/ranking, not just emit schema.
   // verification: {
   //   google: "your-search-console-token",
   // },
 };
-
 export const viewport = {
   themeColor: "#059669",
   width: "device-width",
@@ -82,7 +86,7 @@ export default function RootLayout({ children }) {
     "name": "North Ride",
     "alternateName": ["NorthRide", "North Ride Pakistan"],
     "url": SITE_URL,
-    "logo": `${SITE_URL}/icon.png`,
+    "logo": `${SITE_URL}/icon1.png`,
     "telephone": "+923715982735",
     "sameAs": [
       "https://www.facebook.com/share/1PYPKH7d7x",
@@ -137,7 +141,7 @@ export default function RootLayout({ children }) {
     "provider": {
       "@type": "LocalBusiness",
       "name": "North Ride",
-      "image": `${SITE_URL}/icon.png`,
+      "image": `${SITE_URL}/icon1.png`,
       "address": {
         "@type": "PostalAddress",
         "addressLocality": "Gilgit",
@@ -159,13 +163,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className="scroll-smooth">
       <head>
-        {/*
-          Real resource hints, added directly as <link> tags.
-          (Next.js's metadata "other" field only emits <meta name=... content=...> tags,
-          not <link rel="preconnect">, so putting preconnect hosts there silently does nothing.)
-          Vercel's own API/analytics origin is dropped — Next.js/Vercel already optimize
-          that connection, so a manual preconnect adds no benefit there.
-        */}
+
+        <meta name="apple-mobile-web-app-title" content="North Ride" />
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
